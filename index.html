@@ -144,6 +144,36 @@
   .tab-btn.active[data-domaine="CGP"]{background:var(--ink);}
   .tab-btn.active[data-domaine="Solaire"]{background:var(--solar);}
 
+  /* ---------- Bascule Liste / Rendez-vous ---------- */
+  .view-toggle{display:flex; gap:8px; margin-bottom:16px;}
+  .view-btn.active[data-view="liste"]{background:var(--ink);}
+  .view-btn.active[data-view="rdv"]{background:var(--red);}
+  .rdv-count-badge{
+    display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
+    padding:0 5px; border-radius:20px; background:var(--red); color:#fff; font-size:11px; font-weight:700; margin-left:4px;
+  }
+  .view-btn.active .rdv-count-badge{background:rgba(255,255,255,.3);}
+
+  /* ---------- Vue Rendez-vous à venir ---------- */
+  #rdvWrap{padding:8px 4px;}
+  .rdv-group-label{
+    padding:14px 18px 8px; font-size:12px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--muted);
+  }
+  .rdv-item{
+    display:flex; align-items:center; gap:16px; padding:12px 18px;
+    border-bottom:1px solid #efece3;
+  }
+  .rdv-item:hover{background:#fbfaf7;}
+  .rdv-time{
+    flex:0 0 64px; font-size:15px; font-weight:700; color:var(--ink);
+    background:#fbfaf7; border:1px solid var(--line); border-radius:8px; padding:8px 6px; text-align:center;
+  }
+  .rdv-info{flex:1; min-width:0;}
+  .rdv-info strong{display:block;}
+  .rdv-sub{color:var(--muted); font-size:12px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rdv-actions{display:flex; gap:6px; flex:0 0 auto;}
+
   /* stats */
   .stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:14px; margin-bottom:22px;}
   .stat-card{
@@ -332,7 +362,12 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
 
     <section class="stats" id="statsRow"></section>
 
-    <section class="toolbar">
+    <div class="view-toggle">
+      <button class="tab-btn view-btn" data-view="liste" onclick="setViewMode('liste')">📋 Liste des prospects</button>
+      <button class="tab-btn view-btn" data-view="rdv" onclick="setViewMode('rdv')">📅 Rendez-vous à venir <span id="rdvCountBadge" class="rdv-count-badge" style="display:none;"></span></button>
+    </div>
+
+    <section class="toolbar" id="toolbarSection">
       <input type="text" id="searchInput" placeholder="Rechercher : nom, société, ville, email…">
       <select id="filterStatut">
         <option value="">Tous les statuts</option>
@@ -353,7 +388,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
       <button class="btn-sm primary" id="addProspectBtn">+ Nouveau prospect</button>
     </section>
 
-    <section class="table-wrap">
+    <section class="table-wrap" id="listeWrap">
       <table>
         <thead>
           <tr>
@@ -364,6 +399,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
             <th data-sort="type_cabinet">Type</th>
             <th data-sort="statut">Statut</th>
             <th data-sort="priorite">Priorité</th>
+            <th data-sort="date_rdv">Date RDV</th>
             <th data-sort="prochaine_relance">Prochaine relance</th>
             <th data-sort="budget">Budget</th>
 <th>Produits</th>
@@ -373,6 +409,11 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <tbody id="prospectsBody"></tbody>
       </table>
       <div class="empty-state" id="emptyState" style="display:none;">Aucun prospect ne correspond à ces critères.</div>
+    </section>
+
+    <section class="table-wrap" id="rdvWrap" style="display:none;">
+      <div id="rdvList"></div>
+      <div class="empty-state" id="rdvEmptyState" style="display:none;">Aucun rendez-vous à venir pour le moment.</div>
     </section>
   </main>
 </div>
@@ -426,6 +467,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         </div>
         <div><label>Dernier contact</label><input type="date" id="f_dernierContact"></div>
         <div><label>Prochaine relance</label><input type="date" id="f_prochaineRelance"></div>
+        <div class="full"><label>Date &amp; heure du RDV</label><input type="datetime-local" id="f_dateRdv"></div>
         <div class="full">
           <label>Produits</label>
           <div class="chip-group" id="chipGroupCGP">
@@ -534,6 +576,7 @@ let realtimeChannel = null;
 let sortState = { field: 'created_at', dir: 'desc' };
 let notesDebounceTimers = {};
 let currentDomaineTab = 'Tous';  // 'Tous' | 'CGP' | 'Solaire'
+let viewMode = 'liste';          // 'liste' | 'rdv'
 
 /* ============================================================
    HELPERS UI
@@ -639,6 +682,7 @@ async function initAppAfterLogin(){
   showLoading('Chargement de vos prospects…');
   populateStatutSelects();
   restoreDomaineTab();
+  restoreViewMode();
   const ok = await loadProspects();
   if(ok){
     showApp();
@@ -672,6 +716,7 @@ function rowToProspect(row){
     priorite: row.priorite || 'Moyenne',
     dernierContact: row.dernier_contact || '',
     prochaineRelance: row.prochaine_relance || '',
+    dateRdv: row.date_rdv || '',
     notes: row.notes || '',
     produits: row.produits || [],
 budget: row.budget != null ? Number(row.budget) : null,
@@ -688,6 +733,7 @@ function prospectToRow(p, userId){
     type_cabinet: p.typeCabinet, domaine: p.domaine === 'Solaire' ? 'Solaire' : 'CGP',
     statut: p.statut, priorite: p.priorite,
     dernier_contact: p.dernierContact || null, prochaine_relance: p.prochaineRelance || null,
+    date_rdv: p.dateRdv || null,
     notes: p.notes, produits: p.produits || [], budget: (p.budget !== undefined && p.budget !== null && p.budget !== '') ? p.budget : null,
     ...(userId ? { user_id: userId } : {})
   };
@@ -774,6 +820,85 @@ function updateSectionHeader(){
 function getDomaineScopedList(domaine){
   if(domaine === 'Tous') return prospects;
   return prospects.filter(p => p.domaine === domaine);
+}
+
+/* ============================================================
+   VUE : LISTE vs RENDEZ-VOUS À VENIR
+   ============================================================ */
+function restoreViewMode(){
+  const saved = loadUiPref('viewMode', 'liste');
+  applyViewMode(saved === 'rdv' ? 'rdv' : 'liste');
+}
+
+function setViewMode(mode){
+  saveUiPref('viewMode', mode);
+  applyViewMode(mode);
+  renderAll();
+}
+
+function applyViewMode(mode){
+  viewMode = mode;
+  document.querySelectorAll('.view-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.view === mode);
+  });
+  $('toolbarSection').style.display = mode === 'liste' ? 'flex' : 'none';
+  $('listeWrap').style.display = mode === 'liste' ? '' : 'none';
+  $('rdvWrap').style.display = mode === 'rdv' ? '' : 'none';
+}
+
+function renderRdvView(){
+  const now = new Date();
+  const scoped = getDomaineScopedList(currentDomaineTab);
+  const upcoming = scoped
+    .map(p => ({ p, d: p.dateRdv ? new Date(p.dateRdv) : null }))
+    .filter(x => x.d && !isNaN(x.d.getTime()) && x.d >= now)
+    .sort((a,b) => a.d - b.d);
+
+  const badge = $('rdvCountBadge');
+  if(upcoming.length){ badge.style.display = 'inline-flex'; badge.textContent = upcoming.length; }
+  else { badge.style.display = 'none'; }
+
+  $('rdvEmptyState').style.display = upcoming.length ? 'none' : 'block';
+
+  const todayKey = now.toDateString();
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowKey = tomorrow.toDateString();
+
+  let html = '';
+  let lastGroupKey = null;
+  upcoming.forEach(({p, d})=>{
+    const dayKey = d.toDateString();
+    if(dayKey !== lastGroupKey){
+      let label;
+      if(dayKey === todayKey) label = "Aujourd'hui";
+      else if(dayKey === tomorrowKey) label = 'Demain';
+      else label = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+      label = label.charAt(0).toUpperCase() + label.slice(1);
+      html += `<div class="rdv-group-label">${escapeHtml(label)}</div>`;
+      lastGroupKey = dayKey;
+    }
+
+    const timeStr = d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
+    const addr = [p.adresse, [p.codePostal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · ');
+
+    html += `
+    <div class="rdv-item">
+      <div class="rdv-time">${timeStr}</div>
+      <div class="rdv-info">
+        <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
+        <div class="rdv-sub">${escapeHtml(p.societe||'')}${addr ? ' · ' + escapeHtml(addr) : ''}</div>
+      </div>
+      <span class="badge ${domaineBadgeClass}">${p.domaine}</span>
+      <div class="rdv-actions">
+        ${p.telephone ? `<a class="icon-btn" href="tel:${escapeHtml(p.telephone)}" title="Appeler">📞</a>` : ''}
+        ${p.email ? `<a class="icon-btn" href="#" onclick="onEmailClick('${p.id}'); return false;" title="Ouvrir dans Google Agenda">📅</a>` : ''}
+        <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
+      </div>
+    </div>`;
+  });
+
+  $('rdvList').innerHTML = html;
 }
 
 /* ============================================================
@@ -879,12 +1004,31 @@ function onCallClick(id){
   return d;
 }
 
+/* Conversion entre la valeur d'un <input type="datetime-local"> (heure locale,
+   sans fuseau) et une chaîne ISO UTC adaptée à une colonne timestamptz Supabase. */
+function localInputToIso(value){
+  if(!value) return null;
+  const d = new Date(value);
+  if(isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+function isoToLocalInput(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+async function onDateRdvChange(id, value){
+  await quickUpdate(id, 'dateRdv', localInputToIso(value));
+}
+
 function formatGCalDate(date){
   return date.toISOString().replace(/[-:]|\.\d{3}/g, '');
 }
 
 function buildGoogleCalendarLink(p){
-  const start = nextBusinessDayAt(10, 0);
+  const start = p.dateRdv ? new Date(p.dateRdv) : nextBusinessDayAt(10, 0);
   const end = new Date(start.getTime() + 30 * 60000);
   const text = encodeURIComponent(`Rendez-vous avec ${p.prenom} ${p.nom}`.trim());
   const details = encodeURIComponent(`Rendez-vous de prospection${p.societe ? ' — ' + p.societe : ''}.`);
@@ -971,6 +1115,7 @@ $('f_budget').value = (p && p.budget != null) ? p.budget : '';
   $('f_priorite').value = p ? p.priorite : 'Moyenne';
   $('f_dernierContact').value = p ? (p.dernierContact || '') : '';
   $('f_prochaineRelance').value = p ? (p.prochaineRelance || '') : '';
+  $('f_dateRdv').value = p ? isoToLocalInput(p.dateRdv) : '';
   $('f_notes').value = p ? p.notes : '';
   document.querySelectorAll('.produit-check').forEach(chk=>{
     chk.checked = p ? (p.produits || []).includes(chk.value) : false;
@@ -1011,6 +1156,7 @@ budget: $('f_budget').value !== '' ? parseFloat($('f_budget').value) : null,
     priorite: $('f_priorite').value,
     dernierContact: $('f_dernierContact').value || null,
     prochaineRelance: $('f_prochaineRelance').value || null,
+    dateRdv: localInputToIso($('f_dateRdv').value),
     notes: $('f_notes').value,
     produits: produitsSelected
   };
@@ -1105,7 +1251,7 @@ function getFilteredSorted(){
   return list;
 }
 function toCamel(field){
-  const map = { nom:'nom', societe:'societe', type_cabinet:'typeCabinet', domaine:'domaine', statut:'statut', priorite:'priorite', prochaine_relance:'prochaineRelance' };
+  const map = { nom:'nom', societe:'societe', type_cabinet:'typeCabinet', domaine:'domaine', statut:'statut', priorite:'priorite', prochaine_relance:'prochaineRelance', date_rdv:'dateRdv' };
   return map[field] || field;
 }
 
@@ -1156,6 +1302,9 @@ function renderTable(){
         </select>
       </td>
       <td>
+        <input type="datetime-local" class="inline-select" value="${isoToLocalInput(p.dateRdv)}" onchange="onDateRdvChange('${p.id}', this.value)">
+      </td>
+      <td>
         <input type="date" class="inline-select" value="${p.prochaineRelance||''}" onchange="quickUpdate('${p.id}','prochaineRelance',this.value)">
       </td>
       <td>${p.budget != null ? formatEuro(p.budget) : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
@@ -1177,6 +1326,7 @@ function escapeHtml(str){
 function renderAll(){
   renderStats();
   renderTable();
+  renderRdvView();
 }
 
 ['searchInput'].forEach(id=>$(id).addEventListener('input', renderTable));
