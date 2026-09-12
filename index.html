@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospection CGP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#F3F4F0;
+    --surface:#FFFFFF;
+    --surface-alt:#FAFAF8;
+    --border:#E2E4DD;
+    --border-strong:#CBCEC4;
+    --ink:#161F2B;
+    --ink-soft:#5B6570;
+    --ink-faint:#8B93A0;
+    --accent:#A9793B;
+    --accent-dark:#8A5F28;
+    --accent-tint:#F3E9D8;
+    --danger:#B91C1C;
+    --warn:#B45309;
+    --ok:#15803D;
+    --radius-sm:6px;
+    --radius-md:10px;
+    --shadow:0 1px 2px rgba(22,31,43,0.06), 0 8px 24px rgba(22,31,43,0.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.has-offline-banner{ padding-top:34px; }
+  ::selection{background:var(--accent-tint);}
+  button{font-family:inherit;}
+  input,select,textarea{font-family:inherit;}
+  a{color:var(--accent-dark);}
+
+  /* ---------- Offline banner ---------- */
+  .offline-banner{
+    display:none; align-items:center; justify-content:center; gap:10px;
+    position:fixed; top:0; left:0; right:0; height:34px; z-index:250;
+    background:#3F3F46; color:#fff; font-size:12.5px; font-weight:600;
+  }
+
+  /* ---------- Login / loading screens ---------- */
+  .screen-center{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); z-index:200; padding:20px;
+  }
+  .login-card{
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius-md);
+    box-shadow:var(--shadow); padding:34px 32px; width:100%; max-width:360px;
+  }
+  .login-card .brand-mark{ display:block; margin-bottom:5px; }
+  .login-intro{ color:var(--ink-soft); font-size:13px; margin:0 0 22px; line-height:1.5; }
+  .btn-block{ width:100%; justify-content:center; }
+  .auth-error{
+    background:#FBDCDC; color:#7F1D1D; border-radius:var(--radius-sm);
+    padding:9px 11px; font-size:12.5px; margin:12px 0 0; line-height:1.4; display:none;
+  }
+  .loading-spinner{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid var(--border-strong); border-top-color:var(--accent);
+    margin:0 auto; animation:spin .8s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    display:flex; align-items:center; gap:18px;
+    padding:14px 22px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .brand{
+    display:flex; align-items:baseline; gap:8px;
+    flex-shrink:0;
+  }
+  .brand-mark{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:21px;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .brand-mark span{ color:var(--accent-dark); }
+  .search-wrap{
+    flex:1; max-width:380px; min-width:180px;
+    position:relative;
+  }
+  .search-wrap svg{
+    position:absolute; left:11px; top:50%; transform:translateY(-50%);
+    color:var(--ink-faint); pointer-events:none;
+  }
+  #searchInput{
+    width:100%;
+    padding:9px 12px 9px 34px;
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-md);
+    background:var(--surface-alt);
+    color:var(--ink);
+    font-size:14px;
+    outline:none;
+    transition:border-color .15s, background .15s;
+  }
+  #searchInput:focus{ border-color:var(--accent); background:var(--surface); }
+  .topbar-right{ display:flex; align-items:center; gap:14px; margin-left:auto; flex-shrink:0; flex-wrap:wrap; }
+  .counter{
+    font-size:13px; color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .counter b{ color:var(--ink); font-weight:600; }
+  .btn{
+    display:inline-flex; align-items:center; gap:7px;
+    border:none; cursor:pointer;
+    border-radius:var(--radius-sm);
+    padding:9px 15px;
+    font-size:13.5px; font-weight:600;
+    transition:background .15s, box-shadow .15s, transform .05s;
+    white-space:nowrap;
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn-primary{ background:var(--accent); color:#fff; }
+  .btn-primary:hover{ background:var(--accent-dark); }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); border:1px solid var(--border-strong); }
+  .btn-ghost:hover{ background:var(--surface-alt); color:var(--ink); }
+
+  /* ---------- Save indicator ---------- */
+  .save-indicator{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); white-space:nowrap; }
+  .save-indicator .dot{ width:8px; height:8px; border-radius:50%; background:var(--ink-faint); flex-shrink:0; }
+  .save-indicator.saving .dot{ background:var(--warn); animation:pulse 1s infinite ease-in-out; }
+  .save-indicator.saved .dot{ background:var(--ok); }
+  .save-indicator.connected .dot{ background:var(--ok); }
+  .save-indicator.error .dot{ background:var(--danger); }
+  .save-indicator.saved .label{ color:var(--ok); font-weight:600; }
+  .save-indicator.connected .label{ color:var(--ok); font-weight:600; }
+  .save-indicator.error .label{ color:var(--danger); font-weight:600; }
+  .save-indicator .retry-link{ color:var(--danger); text-decoration:underline; cursor:pointer; font-weight:600; }
+  .last-saved{ font-size:11.5px; color:var(--ink-faint); white-space:nowrap; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  /* ---------- Données menu ---------- */
+  .menu-wrap{ position:relative; }
+  .menu-panel{
+    position:absolute; right:0; top:calc(100% + 6px);
+    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius-md);
+    box-shadow:var(--shadow); min-width:220px; z-index:50; display:none; overflow:hidden;
+  }
+  .menu-panel.open{ display:block; }
+  .menu-item{ padding:10px 14px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:9px; color:var(--ink); }
+  .menu-item:hover{ background:var(--surface-alt); }
+  .menu-item svg{ flex-shrink:0; color:var(--ink-soft); }
+  .menu-sep{ height:1px; background:var(--border); margin:4px 0; }
+
+  /* ---------- Load banner ---------- */
+  .load-banner{
+    padding:10px 22px; font-size:13px; display:flex; align-items:center; gap:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .load-banner.warn{ background:#FCE7D3; color:#92400E; }
+  .load-banner.error{ background:#FBDCDC; color:#7F1D1D; }
+  .load-banner strong{ font-weight:700; }
+  .load-banner button{
+    border:none; background:rgba(0,0,0,0.08); border-radius:6px; padding:6px 11px;
+    font-size:12px; font-weight:700; cursor:pointer; color:inherit; flex-shrink:0;
+  }
+  .load-banner button:hover{ background:rgba(0,0,0,0.16); }
+
+  /* ---------- Filter chips ---------- */
+  .filterbar{
+    display:flex; align-items:center; gap:8px;
+    padding:12px 22px;
+    overflow-x:auto;
+    background:var(--bg);
+    border-bottom:1px solid var(--border);
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--border-strong);
+    background:var(--surface);
+    color:var(--ink-soft);
+    font-size:12.5px; font-weight:600;
+    cursor:pointer; white-space:nowrap;
+    transition:all .12s;
+  }
+  .chip:hover{ border-color:var(--accent); color:var(--ink); }
+  .chip.active{ background:var(--ink); border-color:var(--ink); color:#fff; }
+  .chip .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .chip .n{ opacity:.7; font-weight:500; }
+  .chip.overdue{ border-color:var(--danger); color:var(--danger); }
+  .chip.overdue.active{ background:var(--danger); border-color:var(--danger); color:#fff; }
+
+  /* ---------- Table ---------- */
+  .table-scroll{
+    overflow:auto;
+    height:calc(100vh - 116px);
+  }
+  table{ border-collapse:separate; border-spacing:0; width:100%; min-width:1580px; }
+  thead th{
+    position:sticky; top:0; z-index:20;
+    background:var(--surface-alt);
+    border-bottom:1px solid var(--border-strong);
+    text-align:left;
+    font-size:11.5px; font-weight:600;
+    color:var(--ink-soft);
+    padding:10px 12px;
+    white-space:nowrap;
+    user-select:none;
+  }
+  thead th.sortable{ cursor:pointer; }
+  thead th.sortable:hover{ color:var(--ink); }
+  thead th .arrow{ opacity:.5; font-size:10px; margin-left:3px; }
+  tbody td{
+    padding:9px 12px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+    font-size:13px;
+  }
+  tbody tr{ background:var(--surface); transition:background .1s; }
+  tbody tr:hover{ background:var(--surface-alt); }
+  tbody tr.status-border td:first-child{ box-shadow:inset 3px 0 0 var(--row-color); }
+  .col-nom, .col-prenom{
+    position:sticky; background:inherit; z-index:5;
+  }
+  .col-nom{ left:0; font-weight:600; min-width:130px; }
+  .col-prenom{ left:130px; min-width:110px; box-shadow:1px 0 0 var(--border); }
+  thead th.col-nom, thead th.col-prenom{ z-index:25; }
+  .muted{ color:var(--ink-faint); }
+  .cell-phone a, .cell-email a, .cell-web a{
+    color:var(--ink); text-decoration:none; font-variant-numeric:tabular-nums;
+  }
+  .cell-phone a:hover, .cell-email a:hover, .cell-web a:hover{ color:var(--accent-dark); text-decoration:underline; }
+  .cell-web a{ display:inline-block; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
+
+  .status-select{
+    appearance:none; -webkit-appearance:none;
+    border:1px solid transparent;
+    border-radius:999px;
+    padding:5px 26px 5px 10px;
+    font-size:12px; font-weight:600;
+    cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-opacity='0.35' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 9px center;
+  }
+  .priority-select{
+    appearance:none; -webkit-appearance:none;
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm);
+    padding:5px 22px 5px 22px;
+    font-size:12.5px; font-weight:600;
+    background:var(--surface);
+    cursor:pointer;
+    position:relative;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-opacity='0.3' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 7px center;
+  }
+  .priority-wrap{ position:relative; display:inline-block; }
+  .priority-wrap .pdot{
+    position:absolute; left:8px; top:50%; transform:translateY(-50%);
+    width:7px; height:7px; border-radius:50%; pointer-events:none;
+  }
+
+  .tags-cell{ display:flex; flex-wrap:wrap; gap:4px; max-width:190px; cursor:pointer; min-height:22px; align-items:center; }
+  .tag{
+    display:inline-flex; align-items:center;
+    padding:3px 8px; border-radius:999px;
+    font-size:11px; font-weight:600; white-space:nowrap;
+  }
+  .tag-empty{ color:var(--ink-faint); font-size:12px; font-style:normal; font-weight:500; }
+
+  .date-cell{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .date-overdue{ color:var(--danger); font-weight:600; }
+  .date-today{ color:var(--warn); font-weight:600; }
+
+  .notes-cell{
+    max-width:170px; cursor:pointer;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    color:var(--ink-soft);
+  }
+  .notes-cell:hover{ color:var(--ink); }
+
+  .actions-cell{ display:flex; gap:4px; white-space:nowrap; }
+  .icon-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:var(--radius-sm);
+    border:1px solid transparent; background:transparent; cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .icon-btn:hover{ background:var(--surface-alt); border-color:var(--border-strong); color:var(--ink); }
+  .icon-btn.danger:hover{ color:var(--danger); border-color:var(--danger); }
+  .confirm-delete{ display:flex; align-items:center; gap:6px; font-size:12px; white-space:nowrap; }
+  .confirm-delete button{
+    border:none; border-radius:5px; padding:5px 9px; font-size:11.5px; font-weight:600; cursor:pointer;
+  }
+  .confirm-delete .yes{ background:var(--danger); color:#fff; }
+  .confirm-delete .no{ background:var(--border); color:var(--ink); }
+
+  /* ---------- Empty state ---------- */
+  .empty-state{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:90px 20px; text-align:center; color:var(--ink-soft);
+  }
+  .empty-state h2{
+    font-family:'Fraunces', serif; font-weight:500; font-size:22px; color:var(--ink); margin:14px 0 6px;
+  }
+  .empty-state p{ margin:0 0 18px; font-size:13.5px; max-width:380px; }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(22,31,43,0.45);
+    display:none; align-items:flex-start; justify-content:center;
+    z-index:100; padding:5vh 16px; overflow:auto;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:var(--surface); border-radius:var(--radius-md);
+    width:100%; max-width:640px; box-shadow:var(--shadow);
+    padding:26px 28px 22px;
+  }
+  .modal.small{ max-width:440px; }
+  .modal h3{
+    font-family:'Fraunces', serif; font-weight:600; font-size:19px; margin:0 0 10px; color:var(--ink);
+  }
+  .modal p.modal-msg{ font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 8px; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
+  .form-grid .full{ grid-column:1 / -1; }
+  .field label{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
+  .field input, .field select, .field textarea{
+    width:100%; padding:8px 10px; border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm); font-size:13.5px; color:var(--ink);
+    background:var(--surface-alt); outline:none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); background:var(--surface); }
+  .field textarea{ resize:vertical; min-height:56px; }
+  .checkbox-row{ display:flex; flex-wrap:wrap; gap:8px 16px; padding:8px 2px 2px; }
+  .checkbox-row label{
+    display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--ink); cursor:pointer;
+  }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+  .btn-danger{ background:var(--danger); color:#fff; }
+  .btn-danger:hover{ background:#8f1616; }
+
+  /* ---------- Popover ---------- */
+  .popover{
+    position:fixed; z-index:110; background:var(--surface);
+    border:1px solid var(--border-strong); border-radius:var(--radius-md);
+    box-shadow:var(--shadow); padding:12px; display:none; width:230px;
+  }
+  .popover.open{ display:block; }
+  .popover label{ display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 2px; cursor:pointer; }
+  .popover textarea{
+    width:100%; min-height:90px; border:1px solid var(--border-strong); border-radius:var(--radius-sm);
+    padding:8px; font-size:13px; outline:none; resize:vertical; background:var(--surface-alt);
+  }
+  .popover .pop-actions{ display:flex; justify-content:flex-end; margin-top:8px; }
+  .popover .pop-actions button{
+    border:none; background:var(--accent); color:#fff; border-radius:5px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offlineBanner">Vous êtes hors connexion — les sauvegardes échoueront jusqu'au retour du réseau.</div>
+
+<!-- Écran de chargement -->
+<div class="screen-center" id="loadingScreen">
+  <div style="text-align:center;">
+    <span class="brand-mark">Prospection <span>CGP</span></span>
+    <div class="loading-spinner" style="margin-top:22px;"></div>
+    <p id="loadingText" style="color:var(--ink-soft);font-size:13px;margin-top:14px;">Vérification de la session…</p>
+  </div>
+</div>
+
+<!-- Écran de connexion -->
+<div class="screen-center" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <span class="brand-mark">Prospection <span>CGP</span></span>
+    <p class="login-intro">Connectez-vous pour accéder à votre CRM de prospection.</p>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Email</label>
+      <input id="loginEmail" type="email" autocomplete="username" placeholder="vous@exemple.fr">
+    </div>
+    <div class="field">
+      <label>Mot de passe</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <p class="auth-error" id="loginError"></p>
+    <button class="btn btn-primary btn-block" id="btnLogin" style="margin-top:16px;">Se connecter</button>
+  </div>
+</div>
+
+<!-- Application (visible une fois connecté) -->
+<div id="appRoot" style="display:none;">
+
+<div class="topbar">
+  <div class="brand"><span class="brand-mark">Prospection <span>CGP</span></span></div>
+  <div class="search-wrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input id="searchInput" type="text" placeholder="Rechercher un nom, un cabinet, une ville…">
+  </div>
+  <div class="topbar-right">
+    <span class="counter" id="counter">Nombre de prospects : <b>0</b></span>
+    <div class="save-indicator idle" id="saveIndicator">
+      <span class="dot"></span><span class="label" id="saveLabel">—</span>
+    </div>
+    <span class="last-saved" id="lastSaved"></span>
+    <div class="menu-wrap" id="menuWrap">
+      <button class="btn btn-ghost" id="btnMenu">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
+        Données
+      </button>
+      <div class="menu-panel" id="menuPanel">
+        <div class="menu-item" id="miExportBackup">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exporter une sauvegarde
+        </div>
+        <div class="menu-item" id="miImportBackup">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Importer une sauvegarde
+        </div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" id="miImportCsv">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Importer un CSV
+        </div>
+        <div class="menu-item" id="miExportCsv">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Exporter en CSV
+        </div>
+      </div>
+      <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
+      <input type="file" id="importCsvInput" accept=".csv,text/csv" style="display:none;">
+    </div>
+    <button class="btn btn-ghost" id="btnLogout" title="Se déconnecter">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Déconnexion
+    </button>
+    <button class="btn btn-primary" id="btnAdd">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Ajouter un prospect
+    </button>
+  </div>
+</div>
+
+<div class="load-banner" id="loadBanner" style="display:none;"></div>
+
+<div class="filterbar" id="filterbar"></div>
+
+<div class="table-scroll" id="tableScroll">
+  <table>
+    <thead>
+      <tr>
+        <th class="col-nom sortable" data-sort="nom">Nom<span class="arrow"></span></th>
+        <th class="col-prenom">Prénom</th>
+        <th>Société / Cabinet</th>
+        <th>Ville</th>
+        <th>Téléphone</th>
+        <th>Email</th>
+        <th>Site web</th>
+        <th>Type de cabinet</th>
+        <th>Produits ciblés</th>
+        <th>Statut</th>
+        <th class="sortable" data-sort="dernierContact">Dernier contact<span class="arrow"></span></th>
+        <th class="sortable" data-sort="prochaineRelance">Prochaine relance<span class="arrow"></span></th>
+        <th class="sortable" data-sort="priorite">Priorité<span class="arrow"></span></th>
+        <th>Notes</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#B0B6A9" stroke-width="1.4"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/></svg>
+    <h2 id="emptyTitle">Aucun prospect pour l'instant</h2>
+    <p id="emptyText">Ajoutez vos premiers gestionnaires de patrimoine à appeler pour démarrer votre liste de prospection.</p>
+    <button class="btn btn-primary" id="btnAddEmpty">+ Ajouter un prospect</button>
+  </div>
+</div>
+
+</div><!-- /appRoot -->
+
+<!-- Modal ajout/édition -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modalTitle">Ajouter un prospect</h3>
+    <div class="form-grid">
+      <div class="field"><label>Nom *</label><input id="f_nom" type="text"></div>
+      <div class="field"><label>Prénom</label><input id="f_prenom" type="text"></div>
+      <div class="field"><label>Société / Cabinet</label><input id="f_societe" type="text"></div>
+      <div class="field"><label>Ville</label><input id="f_ville" type="text"></div>
+      <div class="field"><label>Téléphone</label><input id="f_telephone" type="tel" placeholder="06 12 34 56 78"></div>
+      <div class="field"><label>Email</label><input id="f_email" type="email"></div>
+      <div class="field"><label>Site web</label><input id="f_siteweb" type="text" placeholder="exemple.fr"></div>
+      <div class="field">
+        <label>Type de cabinet</label>
+        <input id="f_typeCabinet" list="typeCabinetList" type="text" placeholder="CGPI indépendant…">
+        <datalist id="typeCabinetList">
+          <option value="CGPI indépendant">
+          <option value="Réseau de conseillers">
+          <option value="Banque privée">
+          <option value="Courtier en assurance">
+          <option value="Family office">
+          <option value="Expert-comptable / Avocat fiscaliste">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Statut</label>
+        <select id="f_statut"></select>
+      </div>
+      <div class="field">
+        <label>Priorité</label>
+        <select id="f_priorite"></select>
+      </div>
+      <div class="field"><label>Dernier contact</label><input id="f_dernierContact" type="date"></div>
+      <div class="field"><label>Prochaine relance</label><input id="f_prochaineRelance" type="date"></div>
+      <div class="field full">
+        <label>Produits ciblés</label>
+        <div class="checkbox-row" id="f_produits"></div>
+      </div>
+      <div class="field full"><label>Notes</label><textarea id="f_notes" placeholder="Contexte de l'appel, objections, besoins identifiés…"></textarea></div>
+    </div>
+    <p class="auth-error" id="modalError"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancel">Annuler</button>
+      <button class="btn btn-primary" id="btnSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmation générique (import, restauration, etc.) -->
+<div class="overlay" id="confirmOverlay">
+  <div class="modal small">
+    <h3 id="confirmTitle">Confirmer</h3>
+    <p class="modal-msg" id="confirmMessage"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirmCancel">Annuler</button>
+      <button class="btn btn-danger" id="confirmOk">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Popover produits / notes -->
+<div class="popover" id="popover"></div>
+
+<script>
+(function(){
+  // =========================================================
+  // Configuration Supabase — à renseigner avant utilisation
+  // =========================================================
+  const SUPABASE_URL = 'MON_SUPABASE_URL';
+  const SUPABASE_PUBLISHABLE_KEY = 'MA_SUPABASE_PUBLISHABLE_KEY';
+
+  const { createClient } = supabase;
+  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const STATUTS = [
+    {key:'a_appeler',     label:'À appeler',      bg:'#DCE8FB', fg:'#1D4ED8'},
+    {key:'appele',        label:'Appelé',         bg:'#FBF1D3', fg:'#92720C'},
+    {key:'a_relancer',    label:'À relancer',     bg:'#EBE0FB', fg:'#6D28D9'},
+    {key:'interesse',     label:'Intéressé',      bg:'#DCF5E3', fg:'#15803D'},
+    {key:'rdv_pris',      label:'RDV pris',       bg:'#D9F0FB', fg:'#0369A1'},
+    {key:'negociation',   label:'En négociation', bg:'#FCE7D3', fg:'#C2410C'},
+    {key:'client',        label:'Client',         bg:'#D2F3DE', fg:'#166534'},
+    {key:'pas_interesse', label:'Pas intéressé',  bg:'#FBDCDC', fg:'#B91C1C'},
+    {key:'injoignable',   label:'Injoignable',    bg:'#E4E4E7', fg:'#3F3F46'},
+  ];
+  const PRODUITS = [
+    {key:'leads',      label:'Leads',                  bg:'#DCE8FB', fg:'#1D4ED8'},
+    {key:'tresorerie', label:'Trésorerie entreprise',  bg:'#D7F1EC', fg:'#0F766E'},
+    {key:'av_lux',     label:'Assurance-vie Lux.',      bg:'#F3E7CF', fg:'#92670F'},
+    {key:'lombard',    label:'Crédit lombard',         bg:'#EBE0FB', fg:'#6D28D9'},
+  ];
+  const PRIORITES = [
+    {key:'haute',   label:'Haute',   fg:'#B91C1C'},
+    {key:'moyenne', label:'Moyenne', fg:'#B45309'},
+    {key:'basse',   label:'Basse',   fg:'#52606D'},
+  ];
+  const byKey = (arr,k) => arr.find(x=>x.key===k) || arr[0];
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  function newId(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random()*16|0; const v = c==='x' ? r : (r&0x3|0x8); return v.toString(16);
+    });
+  }
+
+  let session = null;
+  let prospects = [];
+  let query = '';
+  let statusFilter = 'all';
+  let sortField = 'prochaineRelance';
+  let sortDir = 'asc';
+  let editingId = null;
+  let loadState = 'idle'; // 'idle' | 'ok' | 'error'
+  let pendingConfirmCallback = null;
+  let realtimeChannel = null;
+  let lastFailedAction = null;
+  let explicitLogout = false;
+
+  const $ = (sel) => document.querySelector(sel);
+  const tbody = $('#tbody');
+  const filterbar = $('#filterbar');
+  const overlay = $('#overlay');
+  const confirmOverlay = $('#confirmOverlay');
+  const popover = $('#popover');
+  const loadBanner = $('#loadBanner');
+  const saveIndicator = $('#saveIndicator');
+  const saveLabel = $('#saveLabel');
+  const lastSavedEl = $('#lastSaved');
+  const loadingScreen = $('#loadingScreen');
+  const loadingText = $('#loadingText');
+  const loginScreen = $('#loginScreen');
+  const loginEmail = $('#loginEmail');
+  const loginPassword = $('#loginPassword');
+  const loginError = $('#loginError');
+  const btnLogin = $('#btnLogin');
+  const appRoot = $('#appRoot');
+  const offlineBanner = $('#offlineBanner');
+  const modalError = $('#modalError');
+
+  // =========================================================
+  // Conversion camelCase (interface) <-> snake_case (Supabase)
+  // =========================================================
+  function rowToProspect(row){
+    return {
+      id: row.id,
+      nom: row.nom || '',
+      prenom: row.prenom || '',
+      societe: row.societe || '',
+      ville: row.ville || '',
+      telephone: row.telephone || '',
+      email: row.email || '',
+      siteweb: row.siteweb || '',
+      typeCabinet: row.type_cabinet || '',
+      statut: row.statut || 'a_appeler',
+      priorite: row.priorite || 'moyenne',
+      dernierContact: row.dernier_contact || '',
+      prochaineRelance: row.prochaine_relance || '',
+      notes: row.notes || '',
+      produits: row.produits || []
+    };
+  }
+  function prospectToRow(p){
+    return {
+      nom: p.nom || null,
+      prenom: p.prenom || null,
+      societe: p.societe || null,
+      ville: p.ville || null,
+      telephone: p.telephone || null,
+      email: p.email || null,
+      siteweb: p.siteweb || null,
+      type_cabinet: p.typeCabinet || null,
+      statut: p.statut || 'a_appeler',
+      priorite: p.priorite || 'moyenne',
+      dernier_contact: p.dernierContact || null,
+      prochaine_relance: p.prochaineRelance || null,
+      notes: p.notes || null,
+      produits: p.produits || []
+    };
+  }
+
+  // ---------- Indicateur de sauvegarde ----------
+  function setSaveStatus(status){
+    saveIndicator.className = 'save-indicator ' + status;
+    if(status === 'connected'){
+      saveLabel.textContent = 'Connecté';
+    } else if(status === 'saving'){
+      saveLabel.textContent = 'Enregistrement…';
+    } else if(status === 'saved'){
+      saveLabel.innerHTML = '✓ Enregistré';
+      lastSavedEl.textContent = 'Dernière sauvegarde : ' + nowHM();
+      lastFailedAction = null;
+    } else if(status === 'error'){
+      saveLabel.innerHTML = '⚠ Erreur de sauvegarde' + (lastFailedAction ? ' <span class="retry-link" id="retrySaveLink">Réessayer</span>' : '');
+      const link = document.getElementById('retrySaveLink');
+      if(link) link.addEventListener('click', () => { if(lastFailedAction) lastFailedAction(); });
+    } else {
+      saveLabel.textContent = '—';
+    }
+  }
+
+  // =========================================================
+  // Opérations Supabase : chargement
+  // =========================================================
+  async function fetchProspects(){
+    try{
+      const { data, error } = await supabaseClient
+        .from('prospects')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      if(error) throw error;
+      prospects = (data || []).map(rowToProspect);
+      loadState = 'ok';
+      hideLoadBanner();
+      setSaveStatus('connected');
+    }catch(e){
+      console.error('Erreur de chargement Supabase :', e);
+      loadState = 'error';
+      showLoadBanner('error',
+        '⚠ Impossible de charger vos prospects depuis Supabase (' + (e.message || 'erreur inconnue') + "). Vos données restent en ligne — ceci est un problème de chargement, pas une perte de données. Cliquez sur « Réessayer ».",
+        true, fetchProspects);
+      setSaveStatus('error');
+    }
+    render();
+  }
+
+  function showLoadBanner(type, html, withRetry, retryFn){
+    loadBanner.className = 'load-banner ' + type;
+    loadBanner.innerHTML = '<span style="flex:1;">' + html + '</span>' + (withRetry ? '<button id="btnRetryLoad">Réessayer le chargement</button>' : '');
+    loadBanner.style.display = 'flex';
+    if(withRetry){
+      document.getElementById('btnRetryLoad').addEventListener('click', () => {
+        loadBanner.innerHTML = '<span style="flex:1;">Nouvelle tentative…</span>';
+        (retryFn || fetchProspects)();
+      });
+    }
+  }
+  function hideLoadBanner(){ loadBanner.style.display = 'none'; loadBanner.innerHTML=''; }
+
+  // =========================================================
+  // Opérations Supabase : insertion / mise à jour / suppression
+  // =========================================================
+  async function insertProspectRemote(p){
+    const { data, error } = await supabaseClient
+      .from('prospects')
+      .insert(Object.assign({ id: p.id, user_id: session.user.id }, prospectToRow(p)))
+      .select()
+      .single();
+    if(error) throw error;
+    return rowToProspect(data);
+  }
+  async function updateProspectRemote(p){
+    const { error } = await supabaseClient
+      .from('prospects')
+      .update(Object.assign({}, prospectToRow(p), { updated_at: new Date().toISOString() }))
+      .eq('id', p.id)
+      .eq('user_id', session.user.id);
+    if(error) throw error;
+  }
+  async function deleteProspectRemote(id){
+    const { error } = await supabaseClient
+      .from('prospects')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', session.user.id);
+    if(error) throw error;
+  }
+  // Sauvegarde rapide d'un champ modifié en ligne (statut, priorité, produits, notes...)
+  async function saveField(p){
+    setSaveStatus('saving');
+    lastFailedAction = () => saveField(p);
+    try{
+      await updateProspectRemote(p);
+      setSaveStatus('saved');
+    }catch(e){
+      console.error('Erreur de sauvegarde :', e);
+      setSaveStatus('error');
+    }
+  }
+
+  // ---------- Helpers ----------
+  function formatDate(iso){
+    if(!iso) return '';
+    const [y,m,d] = iso.split('-');
+    return d+'/'+m+'/'+y;
+  }
+  function dateClass(iso){
+    if(!iso) return '';
+    if(iso < todayISO()) return 'date-overdue';
+    if(iso === todayISO()) return 'date-today';
+    return '';
+  }
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function domainOf(url){
+    if(!url) return '';
+    return url.replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/$/,'');
+  }
+  function fullUrl(url){
+    if(!url) return '';
+    return /^https?:\/\//.test(url) ? url : 'https://' + url;
+  }
+  function downloadFile(filename, content, mime){
+    const blob = new Blob([content], {type: mime});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  }
+
+  // ---------- Filtrage / tri (toujours côté navigateur) ----------
+  function getFiltered(){
+    let list = prospects.slice();
+    if(statusFilter === 'overdue'){
+      list = list.filter(p => p.prochaineRelance && p.prochaineRelance < todayISO());
+    } else if(statusFilter !== 'all'){
+      list = list.filter(p => p.statut === statusFilter);
+    }
+    if(query.trim()){
+      const q = query.trim().toLowerCase();
+      list = list.filter(p =>
+        [p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email].some(v => (v||'').toLowerCase().includes(q))
+      );
+    }
+    list.sort((a,b)=>{
+      let av = a[sortField] || '';
+      let bv = b[sortField] || '';
+      if(sortField === 'priorite'){
+        const order = {haute:0, moyenne:1, basse:2};
+        av = order[av] ?? 3; bv = order[bv] ?? 3;
+      }
+      if(sortField === 'prochaineRelance' || sortField === 'dernierContact'){
+        if(!av) return 1; if(!bv) return -1;
+      }
+      if(av < bv) return sortDir === 'asc' ? -1 : 1;
+      if(av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }
+
+  // ---------- Rendu ----------
+  function render(){
+    renderFilterbar();
+    renderCounter();
+    renderTable();
+    renderHeaderArrows();
+  }
+
+  function renderCounter(){
+    $('#counter').innerHTML = 'Nombre de prospects : <b>' + prospects.length + '</b>';
+  }
+
+  function renderFilterbar(){
+    const total = prospects.length;
+    let html = '<div class="chip'+(statusFilter==='all'?' active':'')+'" data-filter="all">Tous <span class="n">'+total+'</span></div>';
+    STATUTS.forEach(s=>{
+      const n = prospects.filter(p=>p.statut===s.key).length;
+      html += '<div class="chip'+(statusFilter===s.key?' active':'')+'" data-filter="'+s.key+'">'
+        + '<span class="dot" style="background:'+s.fg+'"></span>' + s.label + ' <span class="n">'+n+'</span></div>';
+    });
+    const overdueN = prospects.filter(p=>p.prochaineRelance && p.prochaineRelance < todayISO()).length;
+    html += '<div class="chip overdue'+(statusFilter==='overdue'?' active':'')+'" data-filter="overdue">Relances en retard <span class="n">'+overdueN+'</span></div>';
+    filterbar.innerHTML = html;
+  }
+
+  function renderHeaderArrows(){
+    document.querySelectorAll('th.sortable').forEach(th=>{
+      const f = th.getAttribute('data-sort');
+      const arrow = th.querySelector('.arrow');
+      arrow.textContent = f === sortField ? (sortDir==='asc' ? '▲' : '▼') : '';
+    });
+  }
+
+  function renderTable(){
+    const list = getFiltered();
+    const isEmptyBase = prospects.length === 0;
+    $('#emptyState').style.display = isEmptyBase ? 'flex' : 'none';
+    $('#tableScroll').querySelector('table').style.display = isEmptyBase ? 'none' : 'table';
+
+    if(isEmptyBase){
+      if(loadState === 'error'){
+        $('#emptyTitle').textContent = 'Chargement impossible pour le moment';
+        $('#emptyText').textContent = "Vos données restent en ligne dans Supabase. Réessayez le chargement via le bandeau ci-dessus avant d'ajouter de nouveaux prospects.";
+      }else{
+        $('#emptyTitle').textContent = "Aucun prospect pour l'instant";
+        $('#emptyText').textContent = 'Ajoutez vos premiers gestionnaires de patrimoine à appeler pour démarrer votre liste de prospection.';
+      }
+    }
+
+    if(list.length === 0 && prospects.length > 0){
+      tbody.innerHTML = '<tr><td colspan="15" style="padding:34px;text-align:center;color:var(--ink-faint);">Aucun prospect ne correspond à votre recherche.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(p => rowHtml(p)).join('');
+  }
+
+  function rowHtml(p){
+    const st = byKey(STATUTS, p.statut);
+    const pr = byKey(PRIORITES, p.priorite);
+    const statusOptions = STATUTS.map(s => '<option value="'+s.key+'" '+(s.key===p.statut?'selected':'')+'>'+s.label+'</option>').join('');
+    const prioOptions = PRIORITES.map(x => '<option value="'+x.key+'" '+(x.key===p.priorite?'selected':'')+'>'+x.label+'</option>').join('');
+
+    const tags = (p.produits && p.produits.length)
+      ? p.produits.map(k=>{ const pr2 = byKey(PRODUITS,k); return '<span class="tag" style="background:'+pr2.bg+';color:'+pr2.fg+'">'+pr2.label+'</span>'; }).join('')
+      : '<span class="tag-empty">+ ajouter</span>';
+
+    const phone = p.telephone ? '<a href="tel:'+p.telephone.replace(/\s/g,'')+'">'+escapeHtml(p.telephone)+'</a>' : '<span class="muted">—</span>';
+    const email = p.email ? '<a href="mailto:'+escapeHtml(p.email)+'">'+escapeHtml(p.email)+'</a>' : '<span class="muted">—</span>';
+    const web = p.siteweb ? '<a href="'+fullUrl(p.siteweb)+'" target="_blank" rel="noopener" title="'+escapeHtml(p.siteweb)+'">'+escapeHtml(domainOf(p.siteweb))+'</a>' : '<span class="muted">—</span>';
+
+    return '<tr data-id="'+p.id+'" class="status-border" style="--row-color:'+st.fg+'">'
+      + '<td class="col-nom">'+escapeHtml(p.nom)+'</td>'
+      + '<td class="col-prenom">'+escapeHtml(p.prenom)+'</td>'
+      + '<td>'+escapeHtml(p.societe)+'</td>'
+      + '<td>'+escapeHtml(p.ville)+'</td>'
+      + '<td class="cell-phone">'+phone+'</td>'
+      + '<td class="cell-email">'+email+'</td>'
+      + '<td class="cell-web">'+web+'</td>'
+      + '<td>'+ (p.typeCabinet ? escapeHtml(p.typeCabinet) : '<span class="muted">—</span>') +'</td>'
+      + '<td><div class="tags-cell" data-action="edit-produits">'+tags+'</div></td>'
+      + '<td><select class="status-select" data-action="change-statut" style="background-color:'+st.bg+';color:'+st.fg+'">'+statusOptions+'</select></td>'
+      + '<td class="date-cell '+dateClass(p.dernierContact)+'">'+ (p.dernierContact ? formatDate(p.dernierContact) : '<span class="muted">—</span>') +'</td>'
+      + '<td class="date-cell '+dateClass(p.prochaineRelance)+'">'+ (p.prochaineRelance ? formatDate(p.prochaineRelance) : '<span class="muted">—</span>') +'</td>'
+      + '<td><div class="priority-wrap"><span class="pdot" style="background:'+pr.fg+'"></span><select class="priority-select" data-action="change-priorite" style="padding-left:20px;color:'+pr.fg+'">'+prioOptions+'</select></div></td>'
+      + '<td class="notes-cell" data-action="edit-notes" title="'+escapeHtml(p.notes||'')+'">'+ (p.notes ? escapeHtml(p.notes) : '<span class="muted">Ajouter une note…</span>') +'</td>'
+      + '<td><div class="actions-cell" data-actions>'
+        + '<button class="icon-btn" data-action="call" title="Appeler et enregistrer le contact">'
+          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.32 1.85.55 2.81.68A2 2 0 0 1 22 16.92z"/></svg>'
+        + '</button>'
+        + '<button class="icon-btn" data-action="edit" title="Modifier la fiche">'
+          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
+        + '</button>'
+        + '<button class="icon-btn danger" data-action="delete" title="Supprimer">'
+          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>'
+        + '</button>'
+      + '</div></td>'
+      + '</tr>';
+  }
+
+  // ---------- Recherche / filtres / tri ----------
+  $('#searchInput').addEventListener('input', e => { query = e.target.value; renderTable(); });
+
+  filterbar.addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if(!chip) return;
+    statusFilter = chip.getAttribute('data-filter');
+    render();
+  });
+
+  document.querySelectorAll('th.sortable').forEach(th=>{
+    th.addEventListener('click', () => {
+      const f = th.getAttribute('data-sort');
+      if(sortField === f){ sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+      else { sortField = f; sortDir = 'asc'; }
+      renderTable(); renderHeaderArrows();
+    });
+  });
+
+  // ---------- Interactions sur une ligne ----------
+  tbody.addEventListener('change', e => {
+    const tr = e.target.closest('tr'); if(!tr) return;
+    const id = tr.getAttribute('data-id');
+    const p = prospects.find(x=>x.id===id); if(!p) return;
+    const action = e.target.getAttribute('data-action');
+    if(action === 'change-statut'){
+      p.statut = e.target.value;
+      tr.style.setProperty('--row-color', byKey(STATUTS,p.statut).fg);
+      e.target.style.backgroundColor = byKey(STATUTS,p.statut).bg;
+      e.target.style.color = byKey(STATUTS,p.statut).fg;
+      renderFilterbar();
+      saveField(p);
+    }
+    if(action === 'change-priorite'){
+      p.priorite = e.target.value;
+      const pr = byKey(PRIORITES,p.priorite);
+      e.target.style.color = pr.fg;
+      tr.querySelector('.pdot').style.background = pr.fg;
+      saveField(p);
+    }
+  });
+
+  tbody.addEventListener('click', e => {
+    const tr = e.target.closest('tr'); if(!tr) return;
+    const id = tr.getAttribute('data-id');
+    const p = prospects.find(x=>x.id===id); if(!p) return;
+    const actionEl = e.target.closest('[data-action]');
+    if(!actionEl) return;
+    const action = actionEl.getAttribute('data-action');
+
+    if(action === 'call'){
+      if(p.statut === 'a_appeler') p.statut = 'appele';
+      p.dernierContact = todayISO();
+      render();
+      window.location.href = 'tel:' + (p.telephone||'').replace(/\s/g,'');
+      saveField(p);
+    }
+    if(action === 'edit'){ openModal(p); }
+    if(action === 'delete'){ showDeleteConfirm(tr, p); }
+    if(action === 'edit-produits'){ openProduitsPopover(actionEl, p); }
+    if(action === 'edit-notes'){ openNotesPopover(actionEl, p); }
+  });
+
+  function showDeleteConfirm(tr, p){
+    const cell = tr.querySelector('[data-actions]');
+    const original = cell.innerHTML;
+    cell.innerHTML = '<div class="confirm-delete">Supprimer ?<button class="yes">Oui</button><button class="no">Non</button></div>';
+    cell.querySelector('.yes').addEventListener('click', async () => {
+      cell.innerHTML = '<div class="confirm-delete">Suppression…</div>';
+      setSaveStatus('saving');
+      try{
+        await deleteProspectRemote(p.id);
+        prospects = prospects.filter(x=>x.id!==p.id);
+        setSaveStatus('saved');
+        render();
+      }catch(e){
+        console.error('Erreur de suppression :', e);
+        setSaveStatus('error');
+        alert('La suppression a échoué (' + (e.message||'erreur inconnue') + "). Le prospect n'a pas été supprimé.");
+        cell.innerHTML = original;
+      }
+    });
+    cell.querySelector('.no').addEventListener('click', () => { cell.innerHTML = original; });
+  }
+
+  // ---------- Popovers ----------
+  function closePopover(){ popover.classList.remove('open'); popover.innerHTML=''; }
+  document.addEventListener('click', e => {
+    if(popover.classList.contains('open') && !popover.contains(e.target) && !e.target.closest('[data-action="edit-produits"]') && !e.target.closest('[data-action="edit-notes"]')){
+      closePopover();
+    }
+    if($('#menuPanel').classList.contains('open') && !e.target.closest('#menuWrap')){
+      $('#menuPanel').classList.remove('open');
+    }
+  });
+  function positionPopover(anchor){
+    const r = anchor.getBoundingClientRect();
+    let left = r.left;
+    if(left + 230 > window.innerWidth - 10) left = window.innerWidth - 240;
+    let top = r.bottom + 6;
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+  }
+  function openProduitsPopover(anchor, p){
+    positionPopover(anchor);
+    popover.innerHTML = PRODUITS.map(pr=>{
+      const checked = (p.produits||[]).includes(pr.key) ? 'checked' : '';
+      return '<label><input type="checkbox" value="'+pr.key+'" '+checked+'><span class="tag" style="background:'+pr.bg+';color:'+pr.fg+'">'+pr.label+'</span></label>';
+    }).join('');
+    popover.classList.add('open');
+    popover.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+      cb.addEventListener('change', () => {
+        const set = new Set(p.produits||[]);
+        cb.checked ? set.add(cb.value) : set.delete(cb.value);
+        p.produits = Array.from(set);
+        renderTable();
+        saveField(p);
+      });
+    });
+  }
+  function openNotesPopover(anchor, p){
+    positionPopover(anchor);
+    popover.innerHTML = '<textarea>'+escapeHtml(p.notes||'')+'</textarea><div class="pop-actions"><button>Enregistrer</button></div>';
+    popover.classList.add('open');
+    const ta = popover.querySelector('textarea');
+    ta.focus();
+    popover.querySelector('button').addEventListener('click', () => {
+      p.notes = ta.value;
+      renderTable();
+      closePopover();
+      saveField(p);
+    });
+  }
+
+  // =========================================================
+  // Menu Données : sauvegarde JSON, restauration, CSV
+  // =========================================================
+  $('#btnMenu').addEventListener('click', () => { $('#menuPanel').classList.toggle('open'); });
+
+  $('#miExportBackup').addEventListener('click', () => {
+    $('#menuPanel').classList.remove('open');
+    const payload = { version: 1, app: 'Prospection CGP', exportedAt: new Date().toISOString(), prospects };
+    downloadFile('prospection-cgp-sauvegarde-' + todayISO() + '.json', JSON.stringify(payload, null, 2), 'application/json');
+  });
+
+  $('#miExportCsv').addEventListener('click', () => {
+    $('#menuPanel').classList.remove('open');
+    exportCSV();
+  });
+
+  $('#miImportBackup').addEventListener('click', () => {
+    $('#menuPanel').classList.remove('open');
+    $('#importFileInput').value = '';
+    $('#importFileInput').click();
+  });
+
+  $('#importFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    let text;
+    try{ text = await file.text(); }
+    catch(err){ alert('Impossible de lire le fichier sélectionné.'); return; }
+    let parsed;
+    try{ parsed = JSON.parse(text); }
+    catch(err){ alert("Fichier invalide : ce n'est pas un JSON valide."); return; }
+    if(!parsed || !Array.isArray(parsed.prospects)){
+      alert('Fichier invalide : structure de sauvegarde non reconnue (le champ "prospects" est manquant).');
+      return;
+    }
+    const incoming = parsed.prospects;
+    showConfirm(
+      'Restaurer cette sauvegarde ?',
+      'Cette opération va remplacer vos ' + prospects.length + ' prospects actuels en ligne par les ' + incoming.length + ' prospects contenus dans le fichier' + (parsed.exportedAt ? (' (exporté le ' + new Date(parsed.exportedAt).toLocaleString('fr-FR') + ')') : '') + '. Cette action est irréversible.',
+      () => runFullRestore(incoming)
+    );
+  });
+
+  async function runFullRestore(incoming){
+    setSaveStatus('saving');
+    try{
+      const { error: delErr } = await supabaseClient.from('prospects').delete().eq('user_id', session.user.id);
+      if(delErr) throw delErr;
+      let inserted = [];
+      if(incoming.length){
+        const rows = incoming.map(p => Object.assign({ id: p.id || newId(), user_id: session.user.id }, prospectToRow(p)));
+        const { data, error } = await supabaseClient.from('prospects').insert(rows).select();
+        if(error) throw error;
+        inserted = (data || []).map(rowToProspect);
+      }
+      prospects = inserted;
+      setSaveStatus('saved');
+      render();
+    }catch(e){
+      console.error('Erreur de restauration :', e);
+      setSaveStatus('error');
+      alert('La restauration a échoué (' + (e.message||'erreur inconnue') + "). Vos données en ligne n'ont peut-être été que partiellement modifiées — vérifiez votre CRM, puis réessayez si besoin.");
+      await fetchProspects();
+    }
+  }
+
+  $('#miImportCsv').addEventListener('click', () => {
+    $('#menuPanel').classList.remove('open');
+    $('#importCsvInput').value = '';
+    $('#importCsvInput').click();
+  });
+
+  function parseCSV(text){
+    text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    const rows = []; let row = []; let field = ''; let inQuotes = false; let i = 0;
+    while(i < text.length){
+      const c = text[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field += '"'; i += 2; continue; }
+          inQuotes = false; i++; continue;
+        }
+        field += c; i++; continue;
+      }
+      if(c === '"'){ inQuotes = true; i++; continue; }
+      if(c === ';'){ row.push(field); field = ''; i++; continue; }
+      if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+      field += c; i++;
+    }
+    if(field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(r => r.some(v => (v||'').trim() !== ''));
+  }
+  function normalizeDateFromCsv(v){
+    v = (v||'').trim();
+    if(!v) return '';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(m) return m[3]+'-'+m[2]+'-'+m[1];
+    return '';
+  }
+  function labelToKey(arr, label){
+    if(!label) return null;
+    const found = arr.find(x => x.label.toLowerCase() === label.trim().toLowerCase());
+    return found ? found.key : null;
+  }
+
+  $('#importCsvInput').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    let text;
+    try{ text = await file.text(); }
+    catch(err){ alert('Impossible de lire le fichier sélectionné.'); return; }
+
+    const rows = parseCSV(text);
+    if(rows.length < 2){
+      alert("Le fichier CSV est vide ou ne contient pas de données exploitables.");
+      e.target.value=''; return;
+    }
+    const headerRow = rows[0].map(h => h.trim().toLowerCase());
+    const dataRows = rows.slice(1);
+    const idx = (names) => headerRow.findIndex(h => names.includes(h));
+    const col = {
+      nom: idx(['nom']),
+      prenom: idx(['prénom','prenom']),
+      societe: idx(['société / cabinet','societe / cabinet','société','societe']),
+      ville: idx(['ville']),
+      telephone: idx(['téléphone','telephone']),
+      email: idx(['email']),
+      siteweb: idx(['site web','siteweb']),
+      typeCabinet: idx(['type de cabinet']),
+      produits: idx(['produits ciblés','produits cibles','produits']),
+      statut: idx(['statut']),
+      dernierContact: idx(['dernier contact']),
+      prochaineRelance: idx(['prochaine relance']),
+      priorite: idx(['priorité','priorite']),
+      notes: idx(['notes'])
+    };
+    if(col.nom === -1){
+      alert('Colonne "Nom" introuvable dans le fichier CSV. Utilisez de préférence un export généré par ce CRM.');
+      e.target.value=''; return;
+    }
+
+    const existingSignatures = new Set(prospects.map(p => (p.nom+'|'+p.prenom+'|'+p.societe+'|'+p.telephone).toLowerCase().trim()));
+    const toInsert = []; let skipped = 0;
+    dataRows.forEach(r => {
+      const nom = (r[col.nom]||'').trim();
+      if(!nom) return;
+      const prenom = col.prenom>-1 ? (r[col.prenom]||'').trim() : '';
+      const societe = col.societe>-1 ? (r[col.societe]||'').trim() : '';
+      const telephone = col.telephone>-1 ? (r[col.telephone]||'').trim() : '';
+      const signature = (nom+'|'+prenom+'|'+societe+'|'+telephone).toLowerCase().trim();
+      if(existingSignatures.has(signature)){ skipped++; return; }
+      existingSignatures.add(signature);
+      const produitsLabels = col.produits>-1 ? (r[col.produits]||'').split(',').map(s=>s.trim()).filter(Boolean) : [];
+      toInsert.push({
+        id: newId(), nom, prenom, societe,
+        ville: col.ville>-1 ? (r[col.ville]||'').trim() : '',
+        telephone,
+        email: col.email>-1 ? (r[col.email]||'').trim() : '',
+        siteweb: col.siteweb>-1 ? (r[col.siteweb]||'').trim() : '',
+        typeCabinet: col.typeCabinet>-1 ? (r[col.typeCabinet]||'').trim() : '',
+        statut: (col.statut>-1 && labelToKey(STATUTS, r[col.statut])) || 'a_appeler',
+        priorite: (col.priorite>-1 && labelToKey(PRIORITES, r[col.priorite])) || 'moyenne',
+        dernierContact: col.dernierContact>-1 ? normalizeDateFromCsv(r[col.dernierContact]) : '',
+        prochaineRelance: col.prochaineRelance>-1 ? normalizeDateFromCsv(r[col.prochaineRelance]) : '',
+        notes: col.notes>-1 ? (r[col.notes]||'').trim() : '',
+        produits: produitsLabels.map(l => labelToKey(PRODUITS,l)).filter(Boolean)
+      });
+    });
+
+    if(toInsert.length === 0){
+      alert('Aucun nouveau prospect à importer (' + skipped + ' ligne(s) ignorée(s), déjà présentes).');
+      e.target.value=''; return;
+    }
+    showConfirm(
+      'Importer ' + toInsert.length + ' prospect(s) ?',
+      'Le fichier contient ' + toInsert.length + ' nouveau(x) prospect(s) à importer' + (skipped>0 ? (' (' + skipped + " ligne(s) déjà existante(s) seront ignorée(s))") : '') + '. Ils seront ajoutés à votre liste actuelle et envoyés à Supabase.',
+      async () => { await runCsvImport(toInsert); e.target.value=''; }
+    );
+  });
+
+  async function runCsvImport(toInsert){
+    setSaveStatus('saving');
+    try{
+      const rows = toInsert.map(p => Object.assign({ id: p.id, user_id: session.user.id }, prospectToRow(p)));
+      const { data, error } = await supabaseClient.from('prospects').insert(rows).select();
+      if(error) throw error;
+      const added = (data || []).map(rowToProspect);
+      prospects = added.concat(prospects);
+      setSaveStatus('saved');
+      render();
+      alert(added.length + ' prospect(s) importé(s) avec succès.');
+    }catch(e){
+      console.error('Erreur import CSV :', e);
+      setSaveStatus('error');
+      alert("Échec de l'import (" + (e.message||'erreur inconnue') + "). Aucun prospect n'a été importé.");
+    }
+  }
+
+  function exportCSV(){
+    const headers = ['Nom','Prénom','Société / Cabinet','Ville','Téléphone','Email','Site web','Type de cabinet','Produits ciblés','Statut','Dernier contact','Prochaine relance','Priorité','Notes'];
+    const csvEscape = (v) => {
+      v = (v==null ? '' : String(v));
+      if(/[;"\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+      return v;
+    };
+    const rows = prospects.map(p=>{
+      const statutLabel = byKey(STATUTS,p.statut).label;
+      const prioLabel = byKey(PRIORITES,p.priorite).label;
+      const produitsLabel = (p.produits||[]).map(k=>byKey(PRODUITS,k).label).join(', ');
+      return [p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email,p.siteweb,p.typeCabinet,produitsLabel,statutLabel,p.dernierContact,p.prochaineRelance,prioLabel,p.notes].map(csvEscape).join(';');
+    });
+    const csv = [headers.map(csvEscape).join(';')].concat(rows).join('\n');
+    downloadFile('prospection-cgp-' + todayISO() + '.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
+  }
+
+  // ---------- Confirmation générique ----------
+  function showConfirm(title, message, onConfirm){
+    $('#confirmTitle').textContent = title;
+    $('#confirmMessage').textContent = message;
+    pendingConfirmCallback = onConfirm;
+    confirmOverlay.classList.add('open');
+  }
+  function closeConfirm(){ confirmOverlay.classList.remove('open'); pendingConfirmCallback = null; }
+  $('#confirmCancel').addEventListener('click', closeConfirm);
+  $('#confirmOk').addEventListener('click', () => {
+    const cb = pendingConfirmCallback;
+    closeConfirm();
+    if(cb) cb();
+  });
+  confirmOverlay.addEventListener('click', e => { if(e.target === confirmOverlay) closeConfirm(); });
+
+  // =========================================================
+  // Modale ajout / édition
+  // =========================================================
+  function fillSelect(sel, arr){
+    sel.innerHTML = arr.map(x => '<option value="'+x.key+'">'+x.label+'</option>').join('');
+  }
+  fillSelect($('#f_statut'), STATUTS);
+  fillSelect($('#f_priorite'), PRIORITES);
+  $('#f_produits').innerHTML = PRODUITS.map(pr =>
+    '<label><input type="checkbox" value="'+pr.key+'"> '+pr.label+'</label>'
+  ).join('');
+
+  function openModal(p){
+    editingId = p ? p.id : null;
+    modalError.style.display = 'none';
+    $('#modalTitle').textContent = p ? 'Modifier le prospect' : 'Ajouter un prospect';
+    $('#f_nom').value = p ? p.nom||'' : '';
+    $('#f_nom').style.borderColor = '';
+    $('#f_prenom').value = p ? p.prenom||'' : '';
+    $('#f_societe').value = p ? p.societe||'' : '';
+    $('#f_ville').value = p ? p.ville||'' : '';
+    $('#f_telephone').value = p ? p.telephone||'' : '';
+    $('#f_email').value = p ? p.email||'' : '';
+    $('#f_siteweb').value = p ? p.siteweb||'' : '';
+    $('#f_typeCabinet').value = p ? p.typeCabinet||'' : '';
+    $('#f_statut').value = p ? p.statut||'a_appeler' : 'a_appeler';
+    $('#f_priorite').value = p ? p.priorite||'moyenne' : 'moyenne';
+    $('#f_dernierContact').value = p ? p.dernierContact||'' : '';
+    $('#f_prochaineRelance').value = p ? p.prochaineRelance||'' : '';
+    $('#f_notes').value = p ? p.notes||'' : '';
+    const produitsSet = new Set(p ? p.produits||[] : []);
+    $('#f_produits').querySelectorAll('input[type=checkbox]').forEach(cb=>{ cb.checked = produitsSet.has(cb.value); });
+    overlay.classList.add('open');
+    setTimeout(()=>$('#f_nom').focus(), 30);
+  }
+  function closeModal(){ overlay.classList.remove('open'); editingId = null; }
+
+  $('#btnAdd').addEventListener('click', () => openModal(null));
+  $('#btnAddEmpty').addEventListener('click', () => openModal(null));
+  $('#btnCancel').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if(e.target === overlay) closeModal(); });
+
+  $('#btnSave').addEventListener('click', async () => {
+    const nom = $('#f_nom').value.trim();
+    if(!nom){ $('#f_nom').focus(); $('#f_nom').style.borderColor = 'var(--danger)'; return; }
+    const produits = Array.from($('#f_produits').querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.value);
+    const data = {
+      nom,
+      prenom: $('#f_prenom').value.trim(),
+      societe: $('#f_societe').value.trim(),
+      ville: $('#f_ville').value.trim(),
+      telephone: $('#f_telephone').value.trim(),
+      email: $('#f_email').value.trim(),
+      siteweb: $('#f_siteweb').value.trim(),
+      typeCabinet: $('#f_typeCabinet').value.trim(),
+      statut: $('#f_statut').value,
+      priorite: $('#f_priorite').value,
+      dernierContact: $('#f_dernierContact').value,
+      prochaineRelance: $('#f_prochaineRelance').value,
+      notes: $('#f_notes').value.trim(),
+      produits
+    };
+    modalError.style.display = 'none';
+    const btn = $('#btnSave');
+    btn.disabled = true; btn.textContent = 'Enregistrement…';
+    setSaveStatus('saving');
+    try{
+      if(editingId){
+        const existing = prospects.find(x=>x.id===editingId);
+        const merged = Object.assign({}, existing, data, { id: editingId });
+        await updateProspectRemote(merged);
+        const idx = prospects.findIndex(x=>x.id===editingId);
+        if(idx>-1) prospects[idx] = merged;
+      }else{
+        const created = Object.assign({ id: newId() }, data);
+        const saved = await insertProspectRemote(created);
+        prospects.unshift(saved);
+      }
+      setSaveStatus('saved');
+      closeModal();
+      render();
+    }catch(e){
+      console.error('Erreur d\u2019enregistrement :', e);
+      setSaveStatus('error');
+      modalError.textContent = "Erreur : impossible d'enregistrer sur Supabase (" + (e.message||'erreur inconnue') + '). Vos informations saisies sont conservées dans ce formulaire — réessayez.';
+      modalError.style.display = 'block';
+    }finally{
+      btn.disabled = false; btn.textContent = 'Enregistrer';
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ closeModal(); closeConfirm(); closePopover(); $('#menuPanel').classList.remove('open'); }
+  });
+
+  // =========================================================
+  // Authentification
+  // =========================================================
+  function showLogin(message){
+    loadingScreen.style.display = 'none';
+    appRoot.style.display = 'none';
+    loginScreen.style.display = 'flex';
+    if(message){ loginError.textContent = message; loginError.style.display = 'block'; }
+    else { loginError.style.display = 'none'; }
+    loginPassword.value = '';
+    stopRealtime();
+  }
+
+  async function enterApp(){
+    loginScreen.style.display = 'none';
+    loadingScreen.style.display = 'flex';
+    loadingText.textContent = 'Chargement de vos prospects…';
+    appRoot.style.display = 'none';
+    await fetchProspects();
+    loadingScreen.style.display = 'none';
+    appRoot.style.display = 'block';
+    startRealtime();
+  }
+
+  async function doLogin(){
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    if(!email || !password){
+      loginError.textContent = 'Merci de renseigner votre email et votre mot de passe.';
+      loginError.style.display = 'block';
+      return;
+    }
+    btnLogin.disabled = true; btnLogin.textContent = 'Connexion…';
+    loginError.style.display = 'none';
+    try{
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+      session = data.session;
+      await enterApp();
+    }catch(e){
+      console.error('Erreur de connexion :', e);
+      loginError.textContent = 'Connexion impossible : ' + (e.message || 'identifiants invalides.');
+      loginError.style.display = 'block';
+    }finally{
+      btnLogin.disabled = false; btnLogin.textContent = 'Se connecter';
+    }
+  }
+  btnLogin.addEventListener('click', doLogin);
+  loginEmail.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+  loginPassword.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+
+  $('#btnLogout').addEventListener('click', async () => {
+    explicitLogout = true;
+    try{ await supabaseClient.auth.signOut(); }
+    catch(e){ console.error('Erreur de déconnexion :', e); }
+  });
+
+  supabaseClient.auth.onAuthStateChange((event, newSession) => {
+    if(event === 'SIGNED_OUT'){
+      session = null;
+      prospects = [];
+      showLogin(explicitLogout ? null : 'Votre session a expiré, merci de vous reconnecter.');
+      explicitLogout = false;
+    } else if(event === 'SIGNED_IN'){
+      session = newSession;
+      if(appRoot.style.display === 'none' && loadingScreen.style.display === 'none'){
+        enterApp();
+      }
+    } else if(event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED'){
+      session = newSession;
+    }
+  });
+
+  // =========================================================
+  // Synchronisation temps réel (uniquement les données de
+  // l'utilisateur connecté, filtrées côté serveur par user_id)
+  // =========================================================
+  function startRealtime(){
+    if(realtimeChannel || !session) return;
+    realtimeChannel = supabaseClient
+      .channel('prospects-user-' + session.user.id)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'prospects', filter: 'user_id=eq.' + session.user.id },
+        (payload) => handleRealtimeEvent(payload)
+      )
+      .subscribe();
+  }
+  function stopRealtime(){
+    if(realtimeChannel){ supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+  }
+  function handleRealtimeEvent(payload){
+    if(payload.eventType === 'INSERT'){
+      const p = rowToProspect(payload.new);
+      if(!prospects.find(x=>x.id===p.id)){ prospects.unshift(p); render(); }
+    }else if(payload.eventType === 'UPDATE'){
+      const p = rowToProspect(payload.new);
+      const idx = prospects.findIndex(x=>x.id===p.id);
+      if(idx>-1){ prospects[idx] = p; render(); }
+    }else if(payload.eventType === 'DELETE'){
+      const oldId = payload.old && payload.old.id;
+      if(oldId && prospects.find(x=>x.id===oldId)){ prospects = prospects.filter(x=>x.id!==oldId); render(); }
+    }
+  }
+
+  // ---------- Bandeau hors connexion ----------
+  window.addEventListener('offline', () => { offlineBanner.style.display = 'flex'; document.body.classList.add('has-offline-banner'); });
+  window.addEventListener('online', () => { offlineBanner.style.display = 'none'; document.body.classList.remove('has-offline-banner'); });
+
+  // =========================================================
+  // Démarrage : vérifier la session avant d'afficher quoi que ce soit
+  // =========================================================
+  async function init(){
+    loadingScreen.style.display = 'flex';
+    loginScreen.style.display = 'none';
+    appRoot.style.display = 'none';
+    try{
+      const { data, error } = await supabaseClient.auth.getSession();
+      if(error) throw error;
+      session = data.session;
+    }catch(e){
+      console.error('Erreur lors de la vérification de session :', e);
+      session = null;
+    }
+    if(session){ await enterApp(); }
+    else{ showLogin(); }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
