@@ -3,1530 +3,1085 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prospection CGP</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<title>Suivi Prospection — Gestionnaires de Patrimoine</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 <style>
   :root{
-    --bg:#F3F4F0;
-    --surface:#FFFFFF;
-    --surface-alt:#FAFAF8;
-    --border:#E2E4DD;
-    --border-strong:#CBCEC4;
-    --ink:#161F2B;
-    --ink-soft:#5B6570;
-    --ink-faint:#8B93A0;
-    --accent:#A9793B;
-    --accent-dark:#8A5F28;
-    --accent-tint:#F3E9D8;
-    --danger:#B91C1C;
-    --warn:#B45309;
-    --ok:#15803D;
-    --radius-sm:6px;
-    --radius-md:10px;
-    --shadow:0 1px 2px rgba(22,31,43,0.06), 0 8px 24px rgba(22,31,43,0.06);
+    --ink:#0f1e33;
+    --ink-soft:#1c3252;
+    --paper:#f6f4ef;
+    --card:#ffffff;
+    --line:#e2ddd0;
+    --gold:#a9823f;
+    --gold-soft:#f1e6cf;
+    --green:#2f6b4f;
+    --green-soft:#e5f0e9;
+    --red:#a13d3d;
+    --red-soft:#f6e6e6;
+    --amber:#a9762f;
+    --amber-soft:#f3ecd9;
+    --muted:#6b6459;
+    --radius:10px;
+    font-family: 'Iowan Old Style','Georgia',serif;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
   body{
-    background:var(--bg);
+    margin:0;
+    background:var(--paper);
     color:var(--ink);
-    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
-    font-size:14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  body.has-offline-banner{ padding-top:34px; }
-  ::selection{background:var(--accent-tint);}
-  button{font-family:inherit;}
+  h1,h2,h3{font-family:'Iowan Old Style','Georgia',serif; font-weight:600; margin:0;}
+  button{font-family:inherit; cursor:pointer;}
   input,select,textarea{font-family:inherit;}
-  a{color:var(--accent-dark);}
 
-  /* ---------- Offline banner ---------- */
-  .offline-banner{
-    display:none; align-items:center; justify-content:center; gap:10px;
-    position:fixed; top:0; left:0; right:0; height:34px; z-index:250;
-    background:#3F3F46; color:#fff; font-size:12.5px; font-weight:600;
-  }
-
-  /* ---------- Login / loading screens ---------- */
-  .screen-center{
+  /* ---------- LOADING ---------- */
+  #loadingScreen{
     position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    background:var(--bg); z-index:200; padding:20px;
+    flex-direction:column; gap:14px; background:var(--paper); z-index:999;
   }
-  .login-card{
-    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius-md);
-    box-shadow:var(--shadow); padding:34px 32px; width:100%; max-width:360px;
-  }
-  .login-card .brand-mark{ display:block; margin-bottom:5px; }
-  .login-intro{ color:var(--ink-soft); font-size:13px; margin:0 0 22px; line-height:1.5; }
-  .btn-block{ width:100%; justify-content:center; }
-  .auth-error{
-    background:#FBDCDC; color:#7F1D1D; border-radius:var(--radius-sm);
-    padding:9px 11px; font-size:12.5px; margin:12px 0 0; line-height:1.4; display:none;
-  }
-  .loading-spinner{
+  .spinner{
     width:34px; height:34px; border-radius:50%;
-    border:3px solid var(--border-strong); border-top-color:var(--accent);
-    margin:0 auto; animation:spin .8s linear infinite;
+    border:3px solid var(--line); border-top-color:var(--gold);
+    animation:spin .8s linear infinite;
   }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loadingScreen p{color:var(--muted); font-size:14px;}
 
-  /* ---------- Top bar ---------- */
-  .topbar{
-    position:sticky; top:0; z-index:30;
-    display:flex; align-items:center; gap:18px;
-    padding:14px 22px;
-    background:var(--surface);
-    border-bottom:1px solid var(--border);
-    flex-wrap:wrap;
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background: radial-gradient(circle at 20% 20%, #16294a, var(--ink) 60%);
+    z-index:998;
   }
-  .brand{
-    display:flex; align-items:baseline; gap:8px;
-    flex-shrink:0;
+  .login-box{
+    background:var(--card); width:100%; max-width:380px; padding:40px 36px;
+    border-radius:var(--radius); box-shadow:0 30px 60px rgba(0,0,0,.35);
   }
+  .login-box .brand{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
   .brand-mark{
-    font-family:'Fraunces', serif;
-    font-weight:600;
-    font-size:21px;
-    letter-spacing:-0.01em;
-    color:var(--ink);
+    width:34px; height:34px; border-radius:8px; background:var(--ink);
+    display:flex; align-items:center; justify-content:center; color:var(--gold-soft);
+    font-family:'Iowan Old Style',serif; font-weight:700; font-size:16px;
   }
-  .brand-mark span{ color:var(--accent-dark); }
-  .search-wrap{
-    flex:1; max-width:380px; min-width:180px;
-    position:relative;
+  .login-box h1{font-size:20px;}
+  .login-box p.sub{color:var(--muted); font-size:13.5px; margin:4px 0 26px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:6px;}
+  .field input{
+    width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:14px; background:#fbfaf7;
   }
-  .search-wrap svg{
-    position:absolute; left:11px; top:50%; transform:translateY(-50%);
-    color:var(--ink-faint); pointer-events:none;
-  }
-  #searchInput{
-    width:100%;
-    padding:9px 12px 9px 34px;
-    border:1px solid var(--border-strong);
-    border-radius:var(--radius-md);
-    background:var(--surface-alt);
-    color:var(--ink);
-    font-size:14px;
-    outline:none;
-    transition:border-color .15s, background .15s;
-  }
-  #searchInput:focus{ border-color:var(--accent); background:var(--surface); }
-  .topbar-right{ display:flex; align-items:center; gap:14px; margin-left:auto; flex-shrink:0; flex-wrap:wrap; }
-  .counter{
-    font-size:13px; color:var(--ink-soft);
-    white-space:nowrap;
-  }
-  .counter b{ color:var(--ink); font-weight:600; }
+  .field input:focus{outline:none; border-color:var(--gold);}
   .btn{
-    display:inline-flex; align-items:center; gap:7px;
-    border:none; cursor:pointer;
-    border-radius:var(--radius-sm);
-    padding:9px 15px;
-    font-size:13.5px; font-weight:600;
-    transition:background .15s, box-shadow .15s, transform .05s;
-    white-space:nowrap;
+    border:none; border-radius:8px; padding:11px 16px; font-size:14px; font-weight:600;
+    transition:opacity .15s;
   }
-  .btn:active{ transform:translateY(1px); }
-  .btn:disabled{ opacity:.55; cursor:default; }
-  .btn-primary{ background:var(--accent); color:#fff; }
-  .btn-primary:hover{ background:var(--accent-dark); }
-  .btn-ghost{ background:transparent; color:var(--ink-soft); border:1px solid var(--border-strong); }
-  .btn-ghost:hover{ background:var(--surface-alt); color:var(--ink); }
-
-  /* ---------- Save indicator ---------- */
-  .save-indicator{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); white-space:nowrap; }
-  .save-indicator .dot{ width:8px; height:8px; border-radius:50%; background:var(--ink-faint); flex-shrink:0; }
-  .save-indicator.saving .dot{ background:var(--warn); animation:pulse 1s infinite ease-in-out; }
-  .save-indicator.saved .dot{ background:var(--ok); }
-  .save-indicator.connected .dot{ background:var(--ok); }
-  .save-indicator.error .dot{ background:var(--danger); }
-  .save-indicator.saved .label{ color:var(--ok); font-weight:600; }
-  .save-indicator.connected .label{ color:var(--ok); font-weight:600; }
-  .save-indicator.error .label{ color:var(--danger); font-weight:600; }
-  .save-indicator .retry-link{ color:var(--danger); text-decoration:underline; cursor:pointer; font-weight:600; }
-  .last-saved{ font-size:11.5px; color:var(--ink-faint); white-space:nowrap; }
-  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
-
-  /* ---------- Données menu ---------- */
-  .menu-wrap{ position:relative; }
-  .menu-panel{
-    position:absolute; right:0; top:calc(100% + 6px);
-    background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--radius-md);
-    box-shadow:var(--shadow); min-width:220px; z-index:50; display:none; overflow:hidden;
+  .btn:hover{opacity:.9;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .btn-primary{background:var(--ink); color:#fff; width:100%; margin-top:6px;}
+  .btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+  .btn-danger{background:var(--red); color:#fff;}
+  .login-error{
+    background:var(--red-soft); color:var(--red); font-size:13px; padding:9px 12px;
+    border-radius:8px; margin-bottom:14px; display:none;
   }
-  .menu-panel.open{ display:block; }
-  .menu-item{ padding:10px 14px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:9px; color:var(--ink); }
-  .menu-item:hover{ background:var(--surface-alt); }
-  .menu-item svg{ flex-shrink:0; color:var(--ink-soft); }
-  .menu-sep{ height:1px; background:var(--border); margin:4px 0; }
 
-  /* ---------- Load banner ---------- */
-  .load-banner{
-    padding:10px 22px; font-size:13px; display:flex; align-items:center; gap:12px;
-    border-bottom:1px solid var(--border);
+  /* ---------- APP SHELL ---------- */
+  #app{display:none;}
+  header.topbar{
+    background:var(--ink); color:#fff; padding:14px 26px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    position:sticky; top:0; z-index:50;
   }
-  .load-banner.warn{ background:#FCE7D3; color:#92400E; }
-  .load-banner.error{ background:#FBDCDC; color:#7F1D1D; }
-  .load-banner strong{ font-weight:700; }
-  .load-banner button{
-    border:none; background:rgba(0,0,0,0.08); border-radius:6px; padding:6px 11px;
-    font-size:12px; font-weight:700; cursor:pointer; color:inherit; flex-shrink:0;
+  .topbar-left{display:flex; align-items:center; gap:12px;}
+  .topbar h1{font-size:17px; color:#fff;}
+  .topbar .sub{font-size:12px; color:#b9c2d1;}
+  .topbar-right{display:flex; align-items:center; gap:14px;}
+  #saveIndicator{
+    font-size:12px; padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,.08); color:#cfd8e6;
   }
-  .load-banner button:hover{ background:rgba(0,0,0,0.16); }
+  #saveIndicator .dot{width:7px; height:7px; border-radius:50%; background:#8fa3c2;}
+  #saveIndicator.state-saving .dot{background:var(--gold); animation:pulse 1s infinite;}
+  #saveIndicator.state-saved .dot{background:#5fbd85;}
+  #saveIndicator.state-error{background:rgba(161,61,61,.25); color:#f5c9c9;}
+  #saveIndicator.state-error .dot{background:#e07373;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .logout-btn{
+    background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff;
+    padding:8px 14px; border-radius:8px; font-size:13px;
+  }
+  .logout-btn:hover{background:rgba(255,255,255,.1);}
 
-  /* ---------- Filter chips ---------- */
-  .filterbar{
-    display:flex; align-items:center; gap:8px;
-    padding:12px 22px;
+  main{max-width:1400px; margin:0 auto; padding:24px 26px 60px;}
+
+  #globalError{
+    display:none; background:var(--red-soft); border:1px solid #e3bcbc; color:var(--red);
+    padding:12px 16px; border-radius:8px; margin-bottom:18px; font-size:13.5px;
+    display:none; align-items:center; justify-content:space-between; gap:12px;
+  }
+  #globalError button{background:none; border:none; color:var(--red); font-weight:700; font-size:15px;}
+
+  /* stats */
+  .stats{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px;}
+  .stat-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .stat-card .num{font-size:26px; font-weight:700;}
+  .stat-card .label{font-size:12.5px; color:var(--muted); margin-top:2px;}
+
+  /* toolbar */
+  .toolbar{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px;
+  }
+  .toolbar input[type=text], .toolbar select{
+    padding:9px 11px; border:1px solid var(--line); border-radius:7px; font-size:13.5px; background:#fbfaf7;
+  }
+  .toolbar input[type=text]{flex:1; min-width:180px;}
+  .toolbar-spacer{flex:1;}
+  .btn-sm{padding:9px 14px; border-radius:7px; font-size:13px; font-weight:600; border:1px solid var(--line); background:#fff;}
+  .btn-sm.primary{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .btn-sm.gold{background:var(--gold); color:#fff; border-color:var(--gold);}
+  input[type=file]{display:none;}
+
+  /* table */
+  .table-wrap{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     overflow-x:auto;
-    background:var(--bg);
-    border-bottom:1px solid var(--border);
   }
-  .chip{
-    display:inline-flex; align-items:center; gap:6px;
-    padding:6px 12px;
-    border-radius:999px;
-    border:1px solid var(--border-strong);
-    background:var(--surface);
-    color:var(--ink-soft);
-    font-size:12.5px; font-weight:600;
-    cursor:pointer; white-space:nowrap;
-    transition:all .12s;
-  }
-  .chip:hover{ border-color:var(--accent); color:var(--ink); }
-  .chip.active{ background:var(--ink); border-color:var(--ink); color:#fff; }
-  .chip .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .chip .n{ opacity:.7; font-weight:500; }
-  .chip.overdue{ border-color:var(--danger); color:var(--danger); }
-  .chip.overdue.active{ background:var(--danger); border-color:var(--danger); color:#fff; }
-
-  /* ---------- Table ---------- */
-  .table-scroll{
-    overflow:auto;
-    height:calc(100vh - 116px);
-  }
-  table{ border-collapse:separate; border-spacing:0; width:100%; min-width:1580px; }
+  table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:1150px;}
   thead th{
-    position:sticky; top:0; z-index:20;
-    background:var(--surface-alt);
-    border-bottom:1px solid var(--border-strong);
-    text-align:left;
-    font-size:11.5px; font-weight:600;
-    color:var(--ink-soft);
-    padding:10px 12px;
-    white-space:nowrap;
-    user-select:none;
+    text-align:left; padding:12px 14px; background:#fbfaf7; color:var(--muted);
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line);
+    cursor:pointer; white-space:nowrap;
   }
-  thead th.sortable{ cursor:pointer; }
-  thead th.sortable:hover{ color:var(--ink); }
-  thead th .arrow{ opacity:.5; font-size:10px; margin-left:3px; }
-  tbody td{
-    padding:9px 12px;
-    border-bottom:1px solid var(--border);
-    vertical-align:middle;
-    font-size:13px;
+  thead th:hover{color:var(--ink);}
+  tbody td{padding:12px 14px; border-bottom:1px solid #efece3; vertical-align:middle;}
+  tbody tr:hover{background:#fbfaf7;}
+  .name-cell strong{display:block;}
+  .name-cell span{color:var(--muted); font-size:12px;}
+  a.tel-link{color:var(--ink); text-decoration:none; font-weight:600;}
+  a.tel-link:hover{color:var(--gold);}
+  select.inline-select{
+    border:1px solid var(--line); border-radius:6px; padding:5px 7px; font-size:12.5px; background:#fff;
   }
-  tbody tr{ background:var(--surface); transition:background .1s; }
-  tbody tr:hover{ background:var(--surface-alt); }
-  tbody tr.status-border td:first-child{ box-shadow:inset 3px 0 0 var(--row-color); }
-  .col-nom, .col-prenom{
-    position:sticky; background:inherit; z-index:5;
+  .badge{
+    display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:600;
   }
-  .col-nom{ left:0; font-weight:600; min-width:130px; }
-  .col-prenom{ left:130px; min-width:110px; box-shadow:1px 0 0 var(--border); }
-  thead th.col-nom, thead th.col-prenom{ z-index:25; }
-  .muted{ color:var(--ink-faint); }
-  .cell-phone a, .cell-email a, .cell-web a{
-    color:var(--ink); text-decoration:none; font-variant-numeric:tabular-nums;
-  }
-  .cell-phone a:hover, .cell-email a:hover, .cell-web a:hover{ color:var(--accent-dark); text-decoration:underline; }
-  .cell-web a{ display:inline-block; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
-
-  .status-select{
-    appearance:none; -webkit-appearance:none;
-    border:1px solid transparent;
-    border-radius:999px;
-    padding:5px 26px 5px 10px;
-    font-size:12px; font-weight:600;
-    cursor:pointer;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-opacity='0.35' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;
-    background-position:right 9px center;
-  }
-  .priority-select{
-    appearance:none; -webkit-appearance:none;
-    border:1px solid var(--border-strong);
-    border-radius:var(--radius-sm);
-    padding:5px 22px 5px 22px;
-    font-size:12.5px; font-weight:600;
-    background:var(--surface);
-    cursor:pointer;
-    position:relative;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23000' stroke-opacity='0.3' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;
-    background-position:right 7px center;
-  }
-  .priority-wrap{ position:relative; display:inline-block; }
-  .priority-wrap .pdot{
-    position:absolute; left:8px; top:50%; transform:translateY(-50%);
-    width:7px; height:7px; border-radius:50%; pointer-events:none;
-  }
-
-  .tags-cell{ display:flex; flex-wrap:wrap; gap:4px; max-width:190px; cursor:pointer; min-height:22px; align-items:center; }
-  .tag{
-    display:inline-flex; align-items:center;
-    padding:3px 8px; border-radius:999px;
-    font-size:11px; font-weight:600; white-space:nowrap;
-  }
-  .tag-empty{ color:var(--ink-faint); font-size:12px; font-style:normal; font-weight:500; }
-
-  .date-cell{ font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .date-overdue{ color:var(--danger); font-weight:600; }
-  .date-today{ color:var(--warn); font-weight:600; }
-
-  .notes-cell{
-    max-width:170px; cursor:pointer;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    color:var(--ink-soft);
-  }
-  .notes-cell:hover{ color:var(--ink); }
-
-  .actions-cell{ display:flex; gap:4px; white-space:nowrap; }
+  .badge-status-1{background:#eef0f4; color:#4a5568;}
+  .badge-status-2{background:#e6eef7; color:#2c5282;}
+  .badge-status-3{background:var(--amber-soft); color:var(--amber);}
+  .badge-status-4{background:var(--green-soft); color:var(--green);}
+  .badge-status-5{background:var(--gold-soft); color:var(--gold);}
+  .badge-status-6{background:#eee6f7; color:#6b46a1;}
+  .badge-status-7{background:var(--green-soft); color:var(--green);}
+  .badge-status-8{background:var(--red-soft); color:var(--red);}
+  .badge-status-9{background:#eee; color:#888;}
+  .priority-dot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px;}
+  .pr-haute{background:var(--red);}
+  .pr-moyenne{background:var(--amber);}
+  .pr-basse{background:var(--muted);}
+  .produit-tags{display:flex; flex-wrap:wrap; gap:4px; max-width:180px;}
+  .produit-tag{background:#eef1f5; color:#3a4a63; font-size:10.5px; padding:2px 7px; border-radius:5px;}
+  .row-actions{display:flex; gap:6px;}
   .icon-btn{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:28px; height:28px; border-radius:var(--radius-sm);
-    border:1px solid transparent; background:transparent; cursor:pointer;
-    color:var(--ink-soft);
+    border:1px solid var(--line); background:#fff; border-radius:6px; padding:6px 9px; font-size:12px;
   }
-  .icon-btn:hover{ background:var(--surface-alt); border-color:var(--border-strong); color:var(--ink); }
-  .icon-btn.danger:hover{ color:var(--danger); border-color:var(--danger); }
-  .confirm-delete{ display:flex; align-items:center; gap:6px; font-size:12px; white-space:nowrap; }
-  .confirm-delete button{
-    border:none; border-radius:5px; padding:5px 9px; font-size:11.5px; font-weight:600; cursor:pointer;
-  }
-  .confirm-delete .yes{ background:var(--danger); color:#fff; }
-  .confirm-delete .no{ background:var(--border); color:var(--ink); }
+  .icon-btn:hover{background:#f2f0e9;}
+  .icon-btn.danger:hover{background:var(--red-soft); border-color:#e3bcbc; color:var(--red);}
+  .empty-state{padding:60px 20px; text-align:center; color:var(--muted);}
 
-  /* ---------- Empty state ---------- */
-  .empty-state{
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:90px 20px; text-align:center; color:var(--ink-soft);
+  /* modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(15,30,51,.45);
+    align-items:flex-start; justify-content:center; z-index:200; padding:40px 16px; overflow-y:auto;
   }
-  .empty-state h2{
-    font-family:'Fraunces', serif; font-weight:500; font-size:22px; color:var(--ink); margin:14px 0 6px;
-  }
-  .empty-state p{ margin:0 0 18px; font-size:13.5px; max-width:380px; }
-
-  /* ---------- Modal ---------- */
-  .overlay{
-    position:fixed; inset:0; background:rgba(22,31,43,0.45);
-    display:none; align-items:flex-start; justify-content:center;
-    z-index:100; padding:5vh 16px; overflow:auto;
-  }
-  .overlay.open{ display:flex; }
   .modal{
-    background:var(--surface); border-radius:var(--radius-md);
-    width:100%; max-width:640px; box-shadow:var(--shadow);
-    padding:26px 28px 22px;
+    background:var(--card); border-radius:var(--radius); width:100%; max-width:640px;
+    padding:28px; box-shadow:0 30px 70px rgba(0,0,0,.3);
   }
-  .modal.small{ max-width:440px; }
-  .modal h3{
-    font-family:'Fraunces', serif; font-weight:600; font-size:19px; margin:0 0 10px; color:var(--ink);
+  .modal h2{font-size:18px; margin-bottom:4px;}
+  .modal .modal-sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 14px;}
+  .form-grid .full{grid-column:1/-1;}
+  .form-grid label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
+  .form-grid input, .form-grid select, .form-grid textarea{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px; font-size:13.5px; background:#fbfaf7;
   }
-  .modal p.modal-msg{ font-size:13.5px; color:var(--ink-soft); line-height:1.5; margin:0 0 8px; }
-  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
-  .form-grid .full{ grid-column:1 / -1; }
-  .field label{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:5px; }
-  .field input, .field select, .field textarea{
-    width:100%; padding:8px 10px; border:1px solid var(--border-strong);
-    border-radius:var(--radius-sm); font-size:13.5px; color:var(--ink);
-    background:var(--surface-alt); outline:none;
+  .form-grid textarea{resize:vertical; min-height:70px;}
+  .chip-group{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    border:1px solid var(--line); border-radius:20px; padding:7px 13px; font-size:12.5px; background:#fff;
+    display:flex; align-items:center; gap:6px;
   }
-  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); background:var(--surface); }
-  .field textarea{ resize:vertical; min-height:56px; }
-  .checkbox-row{ display:flex; flex-wrap:wrap; gap:8px 16px; padding:8px 2px 2px; }
-  .checkbox-row label{
-    display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--ink); cursor:pointer;
-  }
-  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
-  .btn-danger{ background:var(--danger); color:#fff; }
-  .btn-danger:hover{ background:#8f1616; }
+  .chip input{width:auto; margin:0;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:22px;}
+  .form-error{background:var(--red-soft); color:var(--red); padding:9px 12px; border-radius:7px; font-size:13px; margin-bottom:14px; display:none;}
 
-  /* ---------- Popover ---------- */
-  .popover{
-    position:fixed; z-index:110; background:var(--surface);
-    border:1px solid var(--border-strong); border-radius:var(--radius-md);
-    box-shadow:var(--shadow); padding:12px; display:none; width:230px;
-  }
-  .popover.open{ display:block; }
-  .popover label{ display:flex; align-items:center; gap:8px; font-size:13px; padding:5px 2px; cursor:pointer; }
-  .popover textarea{
-    width:100%; min-height:90px; border:1px solid var(--border-strong); border-radius:var(--radius-sm);
-    padding:8px; font-size:13px; outline:none; resize:vertical; background:var(--surface-alt);
-  }
-  .popover .pop-actions{ display:flex; justify-content:flex-end; margin-top:8px; }
-  .popover .pop-actions button{
-    border:none; background:var(--accent); color:#fff; border-radius:5px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer;
+  @media (max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .form-grid{grid-template-columns:1fr;}
+    main{padding:16px;}
+    header.topbar{padding:12px 16px;}
   }
 </style>
 </head>
 <body>
 
-<div class="offline-banner" id="offlineBanner">Vous êtes hors connexion — les sauvegardes échoueront jusqu'au retour du réseau.</div>
-
-<!-- Écran de chargement -->
-<div class="screen-center" id="loadingScreen">
-  <div style="text-align:center;">
-    <span class="brand-mark">Prospection <span>CGP</span></span>
-    <div class="loading-spinner" style="margin-top:22px;"></div>
-    <p id="loadingText" style="color:var(--ink-soft);font-size:13px;margin-top:14px;">Vérification de la session…</p>
-  </div>
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p id="loadingText">Vérification de la session…</p>
 </div>
 
-<!-- Écran de connexion -->
-<div class="screen-center" id="loginScreen" style="display:none;">
-  <div class="login-card">
-    <span class="brand-mark">Prospection <span>CGP</span></span>
-    <p class="login-intro">Connectez-vous pour accéder à votre CRM de prospection.</p>
-    <div class="field" style="margin-bottom:12px;">
-      <label>Email</label>
-      <input id="loginEmail" type="email" autocomplete="username" placeholder="vous@exemple.fr">
-    </div>
-    <div class="field">
-      <label>Mot de passe</label>
-      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="••••••••">
-    </div>
-    <p class="auth-error" id="loginError"></p>
-    <button class="btn btn-primary btn-block" id="btnLogin" style="margin-top:16px;">Se connecter</button>
-  </div>
-</div>
-
-<!-- Application (visible une fois connecté) -->
-<div id="appRoot" style="display:none;">
-
-<div class="topbar">
-  <div class="brand"><span class="brand-mark">Prospection <span>CGP</span></span></div>
-  <div class="search-wrap">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-    <input id="searchInput" type="text" placeholder="Rechercher un nom, un cabinet, une ville…">
-  </div>
-  <div class="topbar-right">
-    <span class="counter" id="counter">Nombre de prospects : <b>0</b></span>
-    <div class="save-indicator idle" id="saveIndicator">
-      <span class="dot"></span><span class="label" id="saveLabel">—</span>
-    </div>
-    <span class="last-saved" id="lastSaved"></span>
-    <div class="menu-wrap" id="menuWrap">
-      <button class="btn btn-ghost" id="btnMenu">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>
-        Données
-      </button>
-      <div class="menu-panel" id="menuPanel">
-        <div class="menu-item" id="miExportBackup">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Exporter une sauvegarde
-        </div>
-        <div class="menu-item" id="miImportBackup">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Importer une sauvegarde
-        </div>
-        <div class="menu-sep"></div>
-        <div class="menu-item" id="miImportCsv">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Importer un CSV
-        </div>
-        <div class="menu-item" id="miExportCsv">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Exporter en CSV
-        </div>
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="brand"><div class="brand-mark">P</div><h1>Suivi Prospection</h1></div>
+    <p class="sub">Connexion — CGP &amp; gestionnaires de patrimoine</p>
+    <div class="login-error" id="loginError"></div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" required autocomplete="username">
       </div>
-      <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
-      <input type="file" id="importCsvInput" accept=".csv,text/csv" style="display:none;">
+      <div class="field">
+        <label for="loginPassword">Mot de passe</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="loginSubmitBtn">Se connecter</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand-mark">P</div>
+      <div>
+        <h1>Suivi Prospection</h1>
+        <div class="sub">Leads · Trésorerie entreprise · Assurance-vie luxembourgeoise · Crédit lombard</div>
+      </div>
     </div>
-    <button class="btn btn-ghost" id="btnLogout" title="Se déconnecter">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Déconnexion
-    </button>
-    <button class="btn btn-primary" id="btnAdd">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-      Ajouter un prospect
-    </button>
-  </div>
+    <div class="topbar-right">
+      <div id="saveIndicator" class="state-idle"><span class="dot"></span><span id="saveIndicatorText">Connecté</span></div>
+      <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="globalError">
+      <span id="globalErrorText"></span>
+      <button id="globalErrorClose">×</button>
+    </div>
+
+    <section class="stats" id="statsRow"></section>
+
+    <section class="toolbar">
+      <input type="text" id="searchInput" placeholder="Rechercher : nom, société, ville, email…">
+      <select id="filterStatut">
+        <option value="">Tous les statuts</option>
+      </select>
+      <select id="filterPriorite">
+        <option value="">Toutes priorités</option>
+        <option value="Haute">Haute</option>
+        <option value="Moyenne">Moyenne</option>
+        <option value="Basse">Basse</option>
+      </select>
+      <select id="filterProduit">
+        <option value="">Tous produits</option>
+        <option value="Leads">Leads</option>
+        <option value="Trésorerie entreprise">Trésorerie entreprise</option>
+        <option value="Assurance-vie luxembourgeoise">Assurance-vie luxembourgeoise</option>
+        <option value="Crédit lombard">Crédit lombard</option>
+      </select>
+      <div class="toolbar-spacer"></div>
+      <button class="btn-sm" id="importBtn">Importer CSV</button>
+      <input type="file" id="csvFileInput" accept=".csv">
+      <button class="btn-sm" id="exportBtn">Exporter CSV</button>
+      <button class="btn-sm primary" id="addProspectBtn">+ Nouveau prospect</button>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="nom">Contact</th>
+            <th data-sort="societe">Société / Ville</th>
+            <th>Téléphone</th>
+            <th data-sort="type_cabinet">Type</th>
+            <th data-sort="statut">Statut</th>
+            <th data-sort="priorite">Priorité</th>
+            <th data-sort="prochaine_relance">Prochaine relance</th>
+            <th>Produits</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="prospectsBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">Aucun prospect ne correspond à ces critères.</div>
+    </section>
+  </main>
 </div>
 
-<div class="load-banner" id="loadBanner" style="display:none;"></div>
-
-<div class="filterbar" id="filterbar"></div>
-
-<div class="table-scroll" id="tableScroll">
-  <table>
-    <thead>
-      <tr>
-        <th class="col-nom sortable" data-sort="nom">Nom<span class="arrow"></span></th>
-        <th class="col-prenom">Prénom</th>
-        <th>Société / Cabinet</th>
-        <th>Ville</th>
-        <th>Téléphone</th>
-        <th>Email</th>
-        <th>Site web</th>
-        <th>Type de cabinet</th>
-        <th>Produits ciblés</th>
-        <th>Statut</th>
-        <th class="sortable" data-sort="dernierContact">Dernier contact<span class="arrow"></span></th>
-        <th class="sortable" data-sort="prochaineRelance">Prochaine relance<span class="arrow"></span></th>
-        <th class="sortable" data-sort="priorite">Priorité<span class="arrow"></span></th>
-        <th>Notes</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
-  <div class="empty-state" id="emptyState" style="display:none;">
-    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#B0B6A9" stroke-width="1.4"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5"/></svg>
-    <h2 id="emptyTitle">Aucun prospect pour l'instant</h2>
-    <p id="emptyText">Ajoutez vos premiers gestionnaires de patrimoine à appeler pour démarrer votre liste de prospection.</p>
-    <button class="btn btn-primary" id="btnAddEmpty">+ Ajouter un prospect</button>
-  </div>
-</div>
-
-</div><!-- /appRoot -->
-
-<!-- Modal ajout/édition -->
-<div class="overlay" id="overlay">
+<!-- MODAL PROSPECT -->
+<div class="modal-overlay" id="prospectModalOverlay">
   <div class="modal">
-    <h3 id="modalTitle">Ajouter un prospect</h3>
-    <div class="form-grid">
-      <div class="field"><label>Nom *</label><input id="f_nom" type="text"></div>
-      <div class="field"><label>Prénom</label><input id="f_prenom" type="text"></div>
-      <div class="field"><label>Société / Cabinet</label><input id="f_societe" type="text"></div>
-      <div class="field"><label>Ville</label><input id="f_ville" type="text"></div>
-      <div class="field"><label>Téléphone</label><input id="f_telephone" type="tel" placeholder="06 12 34 56 78"></div>
-      <div class="field"><label>Email</label><input id="f_email" type="email"></div>
-      <div class="field"><label>Site web</label><input id="f_siteweb" type="text" placeholder="exemple.fr"></div>
-      <div class="field">
-        <label>Type de cabinet</label>
-        <input id="f_typeCabinet" list="typeCabinetList" type="text" placeholder="CGPI indépendant…">
-        <datalist id="typeCabinetList">
-          <option value="CGPI indépendant">
-          <option value="Réseau de conseillers">
-          <option value="Banque privée">
-          <option value="Courtier en assurance">
-          <option value="Family office">
-          <option value="Expert-comptable / Avocat fiscaliste">
-        </datalist>
+    <h2 id="modalTitle">Nouveau prospect</h2>
+    <p class="modal-sub">Les informations du contact et le suivi commercial.</p>
+    <div class="form-error" id="formError"></div>
+    <form id="prospectForm">
+      <div class="form-grid">
+        <div><label>Prénom</label><input type="text" id="f_prenom"></div>
+        <div><label>Nom</label><input type="text" id="f_nom" required></div>
+        <div><label>Société</label><input type="text" id="f_societe"></div>
+        <div><label>Ville</label><input type="text" id="f_ville"></div>
+        <div><label>Téléphone</label><input type="text" id="f_telephone"></div>
+        <div><label>Email</label><input type="email" id="f_email"></div>
+        <div><label>Site web</label><input type="text" id="f_siteweb"></div>
+        <div>
+          <label>Type de cabinet</label>
+          <select id="f_typeCabinet">
+            <option value="CGPI">CGPI</option>
+            <option value="Banque privée">Banque privée</option>
+            <option value="Family office">Family office</option>
+            <option value="Courtier">Courtier</option>
+            <option value="Expert-comptable">Expert-comptable</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+        <div>
+          <label>Statut</label>
+          <select id="f_statut"></select>
+        </div>
+        <div>
+          <label>Priorité</label>
+          <select id="f_priorite">
+            <option value="Moyenne">Moyenne</option>
+            <option value="Haute">Haute</option>
+            <option value="Basse">Basse</option>
+          </select>
+        </div>
+        <div><label>Dernier contact</label><input type="date" id="f_dernierContact"></div>
+        <div><label>Prochaine relance</label><input type="date" id="f_prochaineRelance"></div>
+        <div class="full">
+          <label>Produits</label>
+          <div class="chip-group">
+            <label class="chip"><input type="checkbox" value="Leads" class="produit-check"> Leads</label>
+            <label class="chip"><input type="checkbox" value="Trésorerie entreprise" class="produit-check"> Trésorerie entreprise</label>
+            <label class="chip"><input type="checkbox" value="Assurance-vie luxembourgeoise" class="produit-check"> Assurance-vie luxembourgeoise</label>
+            <label class="chip"><input type="checkbox" value="Crédit lombard" class="produit-check"> Crédit lombard</label>
+          </div>
+        </div>
+        <div class="full">
+          <label>Notes</label>
+          <textarea id="f_notes" placeholder="Historique des échanges, remarques…"></textarea>
+        </div>
       </div>
-      <div class="field">
-        <label>Statut</label>
-        <select id="f_statut"></select>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelModalBtn">Annuler</button>
+        <button type="submit" class="btn btn-primary" id="saveProspectBtn" style="width:auto;">Enregistrer</button>
       </div>
-      <div class="field">
-        <label>Priorité</label>
-        <select id="f_priorite"></select>
-      </div>
-      <div class="field"><label>Dernier contact</label><input id="f_dernierContact" type="date"></div>
-      <div class="field"><label>Prochaine relance</label><input id="f_prochaineRelance" type="date"></div>
-      <div class="field full">
-        <label>Produits ciblés</label>
-        <div class="checkbox-row" id="f_produits"></div>
-      </div>
-      <div class="field full"><label>Notes</label><textarea id="f_notes" placeholder="Contexte de l'appel, objections, besoins identifiés…"></textarea></div>
-    </div>
-    <p class="auth-error" id="modalError"></p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="btnCancel">Annuler</button>
-      <button class="btn btn-primary" id="btnSave">Enregistrer</button>
-    </div>
+    </form>
   </div>
 </div>
-
-<!-- Modal confirmation générique (import, restauration, etc.) -->
-<div class="overlay" id="confirmOverlay">
-  <div class="modal small">
-    <h3 id="confirmTitle">Confirmer</h3>
-    <p class="modal-msg" id="confirmMessage"></p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="confirmCancel">Annuler</button>
-      <button class="btn btn-danger" id="confirmOk">Confirmer</button>
-    </div>
-  </div>
-</div>
-
-<!-- Popover produits / notes -->
-<div class="popover" id="popover"></div>
 
 <script>
-(function(){
-  // =========================================================
-  // Configuration Supabase — à renseigner avant utilisation
-  // =========================================================
-  const SUPABASE_URL = 'https://gjgoiyubnisuaojgjsev.supabase.co/rest/v1/';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VdUbxcgsZ3y9Wms3B0RS1Q_dXl_77Ou';
+/* ============================================================
+   CONFIGURATION SUPABASE — renseigne tes valeurs ici
+   ============================================================ */
+const SUPABASE_URL = 'https://gjgoiyubnisuaojgjsev.supabase.co/rest/v1/';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VdUbxcgsZ3y9Wms3B0RS1Q_dXl_77Ou';
 
-  const { createClient } = supabase;
-  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const { createClient } = supabase;
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-  const STATUTS = [
-    {key:'a_appeler',     label:'À appeler',      bg:'#DCE8FB', fg:'#1D4ED8'},
-    {key:'appele',        label:'Appelé',         bg:'#FBF1D3', fg:'#92720C'},
-    {key:'a_relancer',    label:'À relancer',     bg:'#EBE0FB', fg:'#6D28D9'},
-    {key:'interesse',     label:'Intéressé',      bg:'#DCF5E3', fg:'#15803D'},
-    {key:'rdv_pris',      label:'RDV pris',       bg:'#D9F0FB', fg:'#0369A1'},
-    {key:'negociation',   label:'En négociation', bg:'#FCE7D3', fg:'#C2410C'},
-    {key:'client',        label:'Client',         bg:'#D2F3DE', fg:'#166534'},
-    {key:'pas_interesse', label:'Pas intéressé',  bg:'#FBDCDC', fg:'#B91C1C'},
-    {key:'injoignable',   label:'Injoignable',    bg:'#E4E4E7', fg:'#3F3F46'},
-  ];
-  const PRODUITS = [
-    {key:'leads',      label:'Leads',                  bg:'#DCE8FB', fg:'#1D4ED8'},
-    {key:'tresorerie', label:'Trésorerie entreprise',  bg:'#D7F1EC', fg:'#0F766E'},
-    {key:'av_lux',     label:'Assurance-vie Lux.',      bg:'#F3E7CF', fg:'#92670F'},
-    {key:'lombard',    label:'Crédit lombard',         bg:'#EBE0FB', fg:'#6D28D9'},
-  ];
-  const PRIORITES = [
-    {key:'haute',   label:'Haute',   fg:'#B91C1C'},
-    {key:'moyenne', label:'Moyenne', fg:'#B45309'},
-    {key:'basse',   label:'Basse',   fg:'#52606D'},
-  ];
-  const byKey = (arr,k) => arr.find(x=>x.key===k) || arr[0];
-  const todayISO = () => new Date().toISOString().slice(0,10);
-  const nowHM = () => { const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
-  function newId(){
-    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random()*16|0; const v = c==='x' ? r : (r&0x3|0x8); return v.toString(16);
-    });
+/* ============================================================
+   CONSTANTES MÉTIER
+   ============================================================ */
+const STATUTS = [
+  'À appeler','Appelé','À relancer','Intéressé','RDV pris',
+  'En négociation','Client','Pas intéressé','Injoignable'
+];
+const STATUT_CLASS = {
+  'À appeler':'badge-status-1','Appelé':'badge-status-2','À relancer':'badge-status-3',
+  'Intéressé':'badge-status-4','RDV pris':'badge-status-5','En négociation':'badge-status-6',
+  'Client':'badge-status-7','Pas intéressé':'badge-status-8','Injoignable':'badge-status-9'
+};
+const PRODUITS = ['Leads','Trésorerie entreprise','Assurance-vie luxembourgeoise','Crédit lombard'];
+
+/* ============================================================
+   ÉTAT GLOBAL
+   ============================================================ */
+let session = null;
+let prospects = [];              // format camelCase utilisé par l'interface
+let currentEditId = null;
+let realtimeChannel = null;
+let sortState = { field: 'created_at', dir: 'desc' };
+let notesDebounceTimers = {};
+
+/* ============================================================
+   HELPERS UI
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+
+function setSaveIndicator(state, text){
+  const el = $('saveIndicator');
+  el.className = 'state-' + state;
+  $('saveIndicatorText').textContent = text;
+}
+
+function showGlobalError(message){
+  $('globalErrorText').textContent = message;
+  $('globalError').style.display = 'flex';
+}
+function hideGlobalError(){ $('globalError').style.display = 'none'; }
+$('globalErrorClose').addEventListener('click', hideGlobalError);
+
+function showLoading(text){
+  $('loadingText').textContent = text || 'Chargement…';
+  $('loadingScreen').style.display = 'flex';
+}
+function hideLoading(){ $('loadingScreen').style.display = 'none'; }
+
+function showLogin(){
+  $('loginScreen').style.display = 'flex';
+  $('app').style.display = 'none';
+}
+function showApp(){
+  $('loginScreen').style.display = 'none';
+  $('app').style.display = 'block';
+}
+
+/* UI preferences only (non critiques) via localStorage */
+function saveUiPref(key, value){
+  try{ localStorage.setItem('crm_ui_' + key, JSON.stringify(value)); }catch(e){}
+}
+function loadUiPref(key, fallback){
+  try{
+    const v = localStorage.getItem('crm_ui_' + key);
+    return v ? JSON.parse(v) : fallback;
+  }catch(e){ return fallback; }
+}
+
+/* ============================================================
+   AUTHENTIFICATION
+   ============================================================ */
+$('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = $('loginEmail').value.trim();
+  const password = $('loginPassword').value;
+  const errBox = $('loginError');
+  errBox.style.display = 'none';
+  $('loginSubmitBtn').disabled = true;
+  $('loginSubmitBtn').textContent = 'Connexion…';
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+  $('loginSubmitBtn').disabled = false;
+  $('loginSubmitBtn').textContent = 'Se connecter';
+
+  if(error){
+    errBox.textContent = "Connexion impossible : " + error.message;
+    errBox.style.display = 'block';
+    return;
   }
+  session = data.session;
+  await initAppAfterLogin();
+});
 
-  let session = null;
-  let prospects = [];
-  let query = '';
-  let statusFilter = 'all';
-  let sortField = 'prochaineRelance';
-  let sortDir = 'asc';
-  let editingId = null;
-  let loadState = 'idle'; // 'idle' | 'ok' | 'error'
-  let pendingConfirmCallback = null;
-  let realtimeChannel = null;
-  let lastFailedAction = null;
-  let explicitLogout = false;
+$('logoutBtn').addEventListener('click', async ()=>{
+  await supabaseClient.auth.signOut();
+});
 
-  const $ = (sel) => document.querySelector(sel);
-  const tbody = $('#tbody');
-  const filterbar = $('#filterbar');
-  const overlay = $('#overlay');
-  const confirmOverlay = $('#confirmOverlay');
-  const popover = $('#popover');
-  const loadBanner = $('#loadBanner');
-  const saveIndicator = $('#saveIndicator');
-  const saveLabel = $('#saveLabel');
-  const lastSavedEl = $('#lastSaved');
-  const loadingScreen = $('#loadingScreen');
-  const loadingText = $('#loadingText');
-  const loginScreen = $('#loginScreen');
-  const loginEmail = $('#loginEmail');
-  const loginPassword = $('#loginPassword');
-  const loginError = $('#loginError');
-  const btnLogin = $('#btnLogin');
-  const appRoot = $('#appRoot');
-  const offlineBanner = $('#offlineBanner');
-  const modalError = $('#modalError');
-
-  // =========================================================
-  // Conversion camelCase (interface) <-> snake_case (Supabase)
-  // =========================================================
-  function rowToProspect(row){
-    return {
-      id: row.id,
-      nom: row.nom || '',
-      prenom: row.prenom || '',
-      societe: row.societe || '',
-      ville: row.ville || '',
-      telephone: row.telephone || '',
-      email: row.email || '',
-      siteweb: row.siteweb || '',
-      typeCabinet: row.type_cabinet || '',
-      statut: row.statut || 'a_appeler',
-      priorite: row.priorite || 'moyenne',
-      dernierContact: row.dernier_contact || '',
-      prochaineRelance: row.prochaine_relance || '',
-      notes: row.notes || '',
-      produits: row.produits || []
-    };
+supabaseClient.auth.onAuthStateChange((event, newSession)=>{
+  if(event === 'SIGNED_OUT'){
+    session = null;
+    if(realtimeChannel){ supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+    prospects = [];
+    showLogin();
   }
-  function prospectToRow(p){
-    return {
-      nom: p.nom || null,
-      prenom: p.prenom || null,
-      societe: p.societe || null,
-      ville: p.ville || null,
-      telephone: p.telephone || null,
-      email: p.email || null,
-      siteweb: p.siteweb || null,
-      type_cabinet: p.typeCabinet || null,
-      statut: p.statut || 'a_appeler',
-      priorite: p.priorite || 'moyenne',
-      dernier_contact: p.dernierContact || null,
-      prochaine_relance: p.prochaineRelance || null,
-      notes: p.notes || null,
-      produits: p.produits || []
-    };
-  }
+});
 
-  // ---------- Indicateur de sauvegarde ----------
-  function setSaveStatus(status){
-    saveIndicator.className = 'save-indicator ' + status;
-    if(status === 'connected'){
-      saveLabel.textContent = 'Connecté';
-    } else if(status === 'saving'){
-      saveLabel.textContent = 'Enregistrement…';
-    } else if(status === 'saved'){
-      saveLabel.innerHTML = '✓ Enregistré';
-      lastSavedEl.textContent = 'Dernière sauvegarde : ' + nowHM();
-      lastFailedAction = null;
-    } else if(status === 'error'){
-      saveLabel.innerHTML = '⚠ Erreur de sauvegarde' + (lastFailedAction ? ' <span class="retry-link" id="retrySaveLink">Réessayer</span>' : '');
-      const link = document.getElementById('retrySaveLink');
-      if(link) link.addEventListener('click', () => { if(lastFailedAction) lastFailedAction(); });
-    } else {
-      saveLabel.textContent = '—';
-    }
+async function checkSessionOnLoad(){
+  showLoading('Vérification de la session…');
+  const { data, error } = await supabaseClient.auth.getSession();
+  if(error){
+    hideLoading();
+    showLogin();
+    return;
   }
-
-  // =========================================================
-  // Opérations Supabase : chargement
-  // =========================================================
-  async function fetchProspects(){
-    try{
-      const { data, error } = await supabaseClient
-        .from('prospects')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-      if(error) throw error;
-      prospects = (data || []).map(rowToProspect);
-      loadState = 'ok';
-      hideLoadBanner();
-      setSaveStatus('connected');
-    }catch(e){
-      console.error('Erreur de chargement Supabase :', e);
-      loadState = 'error';
-      showLoadBanner('error',
-        '⚠ Impossible de charger vos prospects depuis Supabase (' + (e.message || 'erreur inconnue') + "). Vos données restent en ligne — ceci est un problème de chargement, pas une perte de données. Cliquez sur « Réessayer ».",
-        true, fetchProspects);
-      setSaveStatus('error');
-    }
-    render();
+  if(data.session){
+    session = data.session;
+    await initAppAfterLogin();
+  } else {
+    hideLoading();
+    showLogin();
   }
+}
 
-  function showLoadBanner(type, html, withRetry, retryFn){
-    loadBanner.className = 'load-banner ' + type;
-    loadBanner.innerHTML = '<span style="flex:1;">' + html + '</span>' + (withRetry ? '<button id="btnRetryLoad">Réessayer le chargement</button>' : '');
-    loadBanner.style.display = 'flex';
-    if(withRetry){
-      document.getElementById('btnRetryLoad').addEventListener('click', () => {
-        loadBanner.innerHTML = '<span style="flex:1;">Nouvelle tentative…</span>';
-        (retryFn || fetchProspects)();
-      });
-    }
+async function initAppAfterLogin(){
+  showLoading('Chargement de vos prospects…');
+  populateStatutSelects();
+  const ok = await loadProspects();
+  if(ok){
+    showApp();
+    hideLoading();
+    setupRealtime();
+    renderAll();
+  } else {
+    hideLoading();
+    showApp(); // on affiche quand même l'app avec l'erreur visible, pas un tableau vide silencieux
   }
-  function hideLoadBanner(){ loadBanner.style.display = 'none'; loadBanner.innerHTML=''; }
+}
 
-  // =========================================================
-  // Opérations Supabase : insertion / mise à jour / suppression
-  // =========================================================
-  async function insertProspectRemote(p){
+/* ============================================================
+   CHARGEMENT DES PROSPECTS
+   ============================================================ */
+function rowToProspect(row){
+  return {
+    id: row.id,
+    nom: row.nom || '',
+    prenom: row.prenom || '',
+    societe: row.societe || '',
+    ville: row.ville || '',
+    telephone: row.telephone || '',
+    email: row.email || '',
+    siteweb: row.siteweb || '',
+    typeCabinet: row.type_cabinet || '',
+    statut: row.statut || 'À appeler',
+    priorite: row.priorite || 'Moyenne',
+    dernierContact: row.dernier_contact || '',
+    prochaineRelance: row.prochaine_relance || '',
+    notes: row.notes || '',
+    produits: row.produits || [],
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
+function prospectToRow(p, userId){
+  return {
+    nom: p.nom, prenom: p.prenom, societe: p.societe, ville: p.ville,
+    telephone: p.telephone, email: p.email, siteweb: p.siteweb,
+    type_cabinet: p.typeCabinet, statut: p.statut, priorite: p.priorite,
+    dernier_contact: p.dernierContact || null, prochaine_relance: p.prochaineRelance || null,
+    notes: p.notes, produits: p.produits || [],
+    ...(userId ? { user_id: userId } : {})
+  };
+}
+
+async function loadProspects(){
+  try{
     const { data, error } = await supabaseClient
       .from('prospects')
-      .insert(Object.assign({ id: p.id, user_id: session.user.id }, prospectToRow(p)))
-      .select()
-      .single();
-    if(error) throw error;
-    return rowToProspect(data);
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+
+    if(error){
+      showGlobalError("Impossible de charger vos prospects (" + error.message + "). Vos données existantes ne sont pas perdues : réessayez de recharger la page.");
+      return false;
+    }
+    prospects = (data || []).map(rowToProspect);
+    hideGlobalError();
+    return true;
+  }catch(e){
+    showGlobalError("Erreur réseau lors du chargement des prospects. Vérifiez votre connexion internet et rechargez la page.");
+    return false;
   }
-  async function updateProspectRemote(p){
+}
+
+/* ============================================================
+   TEMPS RÉEL
+   ============================================================ */
+function setupRealtime(){
+  if(realtimeChannel) return;
+  realtimeChannel = supabaseClient
+    .channel('prospects-changes-' + session.user.id)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'prospects',
+      filter: 'user_id=eq.' + session.user.id
+    }, (payload)=>{
+      handleRealtimeEvent(payload);
+    })
+    .subscribe();
+}
+
+function handleRealtimeEvent(payload){
+  if(payload.eventType === 'INSERT'){
+    if(!prospects.find(p=>p.id === payload.new.id)){
+      prospects.unshift(rowToProspect(payload.new));
+    }
+  } else if(payload.eventType === 'UPDATE'){
+    const idx = prospects.findIndex(p=>p.id === payload.new.id);
+    if(idx !== -1) prospects[idx] = rowToProspect(payload.new);
+  } else if(payload.eventType === 'DELETE'){
+    prospects = prospects.filter(p=>p.id !== payload.old.id);
+  }
+  renderAll();
+}
+
+/* ============================================================
+   CRUD PROSPECTS
+   ============================================================ */
+async function createProspect(p){
+  setSaveIndicator('saving', 'Enregistrement…');
+  const newId = crypto.randomUUID();
+  const row = { id: newId, ...prospectToRow(p, session.user.id) };
+  try{
+    const { data, error } = await supabaseClient.from('prospects').insert(row).select().single();
+    if(error){
+      setSaveIndicator('error', 'Erreur de sauvegarde');
+      showFormError("Échec de l'enregistrement : " + error.message + ". Vos données saisies n'ont pas été perdues, réessayez.");
+      return null;
+    }
+    const created = rowToProspect(data);
+    if(!prospects.find(x=>x.id === created.id)) prospects.unshift(created);
+    setSaveIndicator('saved', 'Enregistré');
+    return created;
+  }catch(e){
+    setSaveIndicator('error', 'Erreur de sauvegarde');
+    showFormError("Erreur réseau : le prospect n'a pas pu être enregistré.");
+    return null;
+  }
+}
+
+async function updateProspect(id, patch){
+  setSaveIndicator('saving', 'Enregistrement…');
+  const idx = prospects.findIndex(p=>p.id === id);
+  if(idx === -1) return false;
+  const merged = { ...prospects[idx], ...patch };
+  try{
     const { error } = await supabaseClient
       .from('prospects')
-      .update(Object.assign({}, prospectToRow(p), { updated_at: new Date().toISOString() }))
-      .eq('id', p.id)
-      .eq('user_id', session.user.id);
-    if(error) throw error;
-  }
-  async function deleteProspectRemote(id){
-    const { error } = await supabaseClient
-      .from('prospects')
-      .delete()
+      .update({ ...prospectToRow(merged), updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('user_id', session.user.id);
-    if(error) throw error;
-  }
-  // Sauvegarde rapide d'un champ modifié en ligne (statut, priorité, produits, notes...)
-  async function saveField(p){
-    setSaveStatus('saving');
-    lastFailedAction = () => saveField(p);
-    try{
-      await updateProspectRemote(p);
-      setSaveStatus('saved');
-    }catch(e){
-      console.error('Erreur de sauvegarde :', e);
-      setSaveStatus('error');
+    if(error){
+      setSaveIndicator('error', 'Erreur de sauvegarde');
+      showGlobalError("La modification n'a pas pu être enregistrée (" + error.message + "). Réessayez.");
+      return false;
     }
+    prospects[idx] = merged;
+    setSaveIndicator('saved', 'Enregistré');
+    return true;
+  }catch(e){
+    setSaveIndicator('error', 'Erreur de sauvegarde');
+    showGlobalError("Erreur réseau : la modification n'a pas été enregistrée.");
+    return false;
+  }
+}
+
+async function deleteProspect(id){
+  if(!confirm('Supprimer définitivement ce prospect ?')) return;
+  setSaveIndicator('saving', 'Suppression…');
+  try{
+    const { error } = await supabaseClient
+      .from('prospects').delete().eq('id', id).eq('user_id', session.user.id);
+    if(error){
+      setSaveIndicator('error', 'Erreur de sauvegarde');
+      showGlobalError("La suppression a échoué (" + error.message + "). Le prospect est toujours présent.");
+      return;
+    }
+    prospects = prospects.filter(p=>p.id !== id);
+    setSaveIndicator('saved', 'Enregistré');
+    renderAll();
+  }catch(e){
+    setSaveIndicator('error', 'Erreur de sauvegarde');
+    showGlobalError("Erreur réseau : la suppression n'a pas pu être confirmée.");
+  }
+}
+
+/* Sauvegarde rapide d'un champ (statut, priorité, produits, dates) */
+async function quickUpdate(id, field, value){
+  await updateProspect(id, { [field]: value });
+  renderAll();
+}
+
+/* Notes avec debounce */
+function onNotesInput(id, value){
+  prospects.find(p=>p.id===id).notes = value; // reflet immédiat local
+  clearTimeout(notesDebounceTimers[id]);
+  notesDebounceTimers[id] = setTimeout(()=>{
+    updateProspect(id, { notes: value });
+  }, 700);
+}
+
+/* Appel téléphonique : ouvre tel: et passe le statut à "Appelé" si c'était "À appeler" */
+function onCallClick(id){
+  const p = prospects.find(x=>x.id===id);
+  if(!p) return;
+  window.location.href = 'tel:' + p.telephone;
+  if(p.statut === 'À appeler'){
+    quickUpdate(id, 'statut', 'Appelé');
+  }
+}
+
+/* ============================================================
+   FORMULAIRE / MODAL
+   ============================================================ */
+function populateStatutSelects(){
+  $('filterStatut').innerHTML = '<option value="">Tous les statuts</option>' +
+    STATUTS.map(s=>`<option value="${s}">${s}</option>`).join('');
+  $('f_statut').innerHTML = STATUTS.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+function showFormError(msg){
+  const el = $('formError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideFormError(){ $('formError').style.display = 'none'; }
+
+function openProspectModal(id){
+  currentEditId = id || null;
+  hideFormError();
+  const p = id ? prospects.find(x=>x.id===id) : null;
+  $('modalTitle').textContent = id ? 'Modifier le prospect' : 'Nouveau prospect';
+  $('f_prenom').value = p ? p.prenom : '';
+  $('f_nom').value = p ? p.nom : '';
+  $('f_societe').value = p ? p.societe : '';
+  $('f_ville').value = p ? p.ville : '';
+  $('f_telephone').value = p ? p.telephone : '';
+  $('f_email').value = p ? p.email : '';
+  $('f_siteweb').value = p ? p.siteweb : '';
+  $('f_typeCabinet').value = p ? p.typeCabinet : 'CGPI';
+  $('f_statut').value = p ? p.statut : 'À appeler';
+  $('f_priorite').value = p ? p.priorite : 'Moyenne';
+  $('f_dernierContact').value = p ? (p.dernierContact || '') : '';
+  $('f_prochaineRelance').value = p ? (p.prochaineRelance || '') : '';
+  $('f_notes').value = p ? p.notes : '';
+  document.querySelectorAll('.produit-check').forEach(chk=>{
+    chk.checked = p ? (p.produits || []).includes(chk.value) : false;
+  });
+  $('prospectModalOverlay').style.display = 'flex';
+}
+function closeProspectModal(){
+  $('prospectModalOverlay').style.display = 'none';
+  currentEditId = null;
+}
+$('addProspectBtn').addEventListener('click', ()=>openProspectModal(null));
+$('cancelModalBtn').addEventListener('click', closeProspectModal);
+$('prospectModalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='prospectModalOverlay') closeProspectModal(); });
+
+$('prospectForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  hideFormError();
+  const nom = $('f_nom').value.trim();
+  if(!nom){ showFormError('Le nom est obligatoire.'); return; }
+
+  const produitsSelected = Array.from(document.querySelectorAll('.produit-check'))
+    .filter(c=>c.checked).map(c=>c.value);
+
+  const payload = {
+    prenom: $('f_prenom').value.trim(),
+    nom,
+    societe: $('f_societe').value.trim(),
+    ville: $('f_ville').value.trim(),
+    telephone: $('f_telephone').value.trim(),
+    email: $('f_email').value.trim(),
+    siteweb: $('f_siteweb').value.trim(),
+    typeCabinet: $('f_typeCabinet').value,
+    statut: $('f_statut').value,
+    priorite: $('f_priorite').value,
+    dernierContact: $('f_dernierContact').value || null,
+    prochaineRelance: $('f_prochaineRelance').value || null,
+    notes: $('f_notes').value,
+    produits: produitsSelected
+  };
+
+  const btn = $('saveProspectBtn');
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+
+  let ok;
+  if(currentEditId){
+    ok = await updateProspect(currentEditId, payload);
+  } else {
+    ok = await createProspect(payload);
   }
 
-  // ---------- Helpers ----------
-  function formatDate(iso){
-    if(!iso) return '';
-    const [y,m,d] = iso.split('-');
-    return d+'/'+m+'/'+y;
-  }
-  function dateClass(iso){
-    if(!iso) return '';
-    if(iso < todayISO()) return 'date-overdue';
-    if(iso === todayISO()) return 'date-today';
-    return '';
-  }
-  function escapeHtml(s){
-    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function domainOf(url){
-    if(!url) return '';
-    return url.replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/$/,'');
-  }
-  function fullUrl(url){
-    if(!url) return '';
-    return /^https?:\/\//.test(url) ? url : 'https://' + url;
-  }
-  function downloadFile(filename, content, mime){
-    const blob = new Blob([content], {type: mime});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 1500);
-  }
+  btn.disabled = false; btn.textContent = 'Enregistrer';
 
-  // ---------- Filtrage / tri (toujours côté navigateur) ----------
-  function getFiltered(){
-    let list = prospects.slice();
-    if(statusFilter === 'overdue'){
-      list = list.filter(p => p.prochaineRelance && p.prochaineRelance < todayISO());
-    } else if(statusFilter !== 'all'){
-      list = list.filter(p => p.statut === statusFilter);
-    }
-    if(query.trim()){
-      const q = query.trim().toLowerCase();
-      list = list.filter(p =>
-        [p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email].some(v => (v||'').toLowerCase().includes(q))
-      );
-    }
-    list.sort((a,b)=>{
-      let av = a[sortField] || '';
-      let bv = b[sortField] || '';
-      if(sortField === 'priorite'){
-        const order = {haute:0, moyenne:1, basse:2};
-        av = order[av] ?? 3; bv = order[bv] ?? 3;
-      }
-      if(sortField === 'prochaineRelance' || sortField === 'dernierContact'){
-        if(!av) return 1; if(!bv) return -1;
-      }
-      if(av < bv) return sortDir === 'asc' ? -1 : 1;
-      if(av > bv) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return list;
+  if(ok){
+    closeProspectModal();
+    renderAll();
   }
+});
 
-  // ---------- Rendu ----------
-  function render(){
-    renderFilterbar();
-    renderCounter();
+/* ============================================================
+   RENDU : STATS
+   ============================================================ */
+function renderStats(){
+  const total = prospects.length;
+  const aRelancer = prospects.filter(p=>p.statut==='À relancer').length;
+  const rdvPris = prospects.filter(p=>p.statut==='RDV pris').length;
+  const clients = prospects.filter(p=>p.statut==='Client').length;
+  const today = new Date().toISOString().slice(0,10);
+  const relancesToday = prospects.filter(p=>p.prochaineRelance && p.prochaineRelance <= today && p.statut!=='Client' && p.statut!=='Pas intéressé').length;
+
+  $('statsRow').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="label">Prospects au total</div></div>
+    <div class="stat-card"><div class="num">${aRelancer}</div><div class="label">À relancer</div></div>
+    <div class="stat-card"><div class="num">${rdvPris}</div><div class="label">RDV pris</div></div>
+    <div class="stat-card"><div class="num">${clients}</div><div class="label">Clients</div></div>
+    <div class="stat-card"><div class="num">${relancesToday}</div><div class="label">Relances en retard / dues</div></div>
+  `;
+}
+
+/* ============================================================
+   RENDU : TABLEAU (filtres, recherche, tri côté navigateur)
+   ============================================================ */
+function getFilteredSorted(){
+  const q = $('searchInput').value.trim().toLowerCase();
+  const fStatut = $('filterStatut').value;
+  const fPriorite = $('filterPriorite').value;
+  const fProduit = $('filterProduit').value;
+
+  let list = prospects.filter(p=>{
+    if(fStatut && p.statut !== fStatut) return false;
+    if(fPriorite && p.priorite !== fPriorite) return false;
+    if(fProduit && !(p.produits||[]).includes(fProduit)) return false;
+    if(q){
+      const hay = [p.nom,p.prenom,p.societe,p.ville,p.email,p.telephone].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const { field, dir } = sortState;
+  list.sort((a,b)=>{
+    let va = a[toCamel(field)] ?? '';
+    let vb = b[toCamel(field)] ?? '';
+    if(field==='created_at'){ va = a.created_at||''; vb = b.created_at||''; }
+    if(va < vb) return dir==='asc' ? -1 : 1;
+    if(va > vb) return dir==='asc' ? 1 : -1;
+    return 0;
+  });
+  return list;
+}
+function toCamel(field){
+  const map = { nom:'nom', societe:'societe', type_cabinet:'typeCabinet', statut:'statut', priorite:'priorite', prochaine_relance:'prochaineRelance' };
+  return map[field] || field;
+}
+
+document.querySelectorAll('thead th[data-sort]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const field = th.dataset.sort;
+    if(sortState.field === field){
+      sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortState = { field, dir: 'asc' };
+    }
+    saveUiPref('sort', sortState);
     renderTable();
-    renderHeaderArrows();
-  }
+  });
+});
 
-  function renderCounter(){
-    $('#counter').innerHTML = 'Nombre de prospects : <b>' + prospects.length + '</b>';
-  }
+function renderTable(){
+  const list = getFilteredSorted();
+  const body = $('prospectsBody');
+  $('emptyState').style.display = list.length ? 'none' : 'block';
 
-  function renderFilterbar(){
-    const total = prospects.length;
-    let html = '<div class="chip'+(statusFilter==='all'?' active':'')+'" data-filter="all">Tous <span class="n">'+total+'</span></div>';
-    STATUTS.forEach(s=>{
-      const n = prospects.filter(p=>p.statut===s.key).length;
-      html += '<div class="chip'+(statusFilter===s.key?' active':'')+'" data-filter="'+s.key+'">'
-        + '<span class="dot" style="background:'+s.fg+'"></span>' + s.label + ' <span class="n">'+n+'</span></div>';
+  body.innerHTML = list.map(p=>{
+    const produitsHtml = (p.produits||[]).map(pr=>`<span class="produit-tag">${escapeHtml(pr)}</span>`).join('');
+    const prClass = p.priorite==='Haute' ? 'pr-haute' : p.priorite==='Basse' ? 'pr-basse' : 'pr-moyenne';
+    return `
+    <tr>
+      <td class="name-cell">
+        <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
+        <span>${escapeHtml(p.email||'')}</span>
+      </td>
+      <td>
+        <div>${escapeHtml(p.societe||'—')}</div>
+        <span style="color:var(--muted); font-size:12px;">${escapeHtml(p.ville||'')}</span>
+      </td>
+      <td>${p.telephone ? `<a class="tel-link" href="tel:${escapeHtml(p.telephone)}" onclick="onCallClick('${p.id}')">${escapeHtml(p.telephone)}</a>` : '—'}</td>
+      <td>${escapeHtml(p.typeCabinet||'—')}</td>
+      <td>
+        <select class="inline-select" onchange="quickUpdate('${p.id}','statut',this.value)">
+          ${STATUTS.map(s=>`<option value="${s}" ${s===p.statut?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select class="inline-select" onchange="quickUpdate('${p.id}','priorite',this.value)">
+          <option value="Haute" ${p.priorite==='Haute'?'selected':''}>Haute</option>
+          <option value="Moyenne" ${p.priorite==='Moyenne'?'selected':''}>Moyenne</option>
+          <option value="Basse" ${p.priorite==='Basse'?'selected':''}>Basse</option>
+        </select>
+      </td>
+      <td>
+        <input type="date" class="inline-select" value="${p.prochaineRelance||''}" onchange="quickUpdate('${p.id}','prochaineRelance',this.value)">
+      </td>
+      <td><div class="produit-tags">${produitsHtml || '<span style="color:var(--muted); font-size:12px;">—</span>'}</div></td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
+          <button class="icon-btn danger" onclick="deleteProspect('${p.id}')" title="Supprimer">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escapeHtml(str){
+  return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderAll(){
+  renderStats();
+  renderTable();
+}
+
+['searchInput'].forEach(id=>$(id).addEventListener('input', renderTable));
+['filterStatut','filterPriorite','filterProduit'].forEach(id=>{
+  $(id).addEventListener('change', ()=>{
+    saveUiPref('filters', {
+      statut: $('filterStatut').value, priorite: $('filterPriorite').value, produit: $('filterProduit').value
     });
-    const overdueN = prospects.filter(p=>p.prochaineRelance && p.prochaineRelance < todayISO()).length;
-    html += '<div class="chip overdue'+(statusFilter==='overdue'?' active':'')+'" data-filter="overdue">Relances en retard <span class="n">'+overdueN+'</span></div>';
-    filterbar.innerHTML = html;
-  }
-
-  function renderHeaderArrows(){
-    document.querySelectorAll('th.sortable').forEach(th=>{
-      const f = th.getAttribute('data-sort');
-      const arrow = th.querySelector('.arrow');
-      arrow.textContent = f === sortField ? (sortDir==='asc' ? '▲' : '▼') : '';
-    });
-  }
-
-  function renderTable(){
-    const list = getFiltered();
-    const isEmptyBase = prospects.length === 0;
-    $('#emptyState').style.display = isEmptyBase ? 'flex' : 'none';
-    $('#tableScroll').querySelector('table').style.display = isEmptyBase ? 'none' : 'table';
-
-    if(isEmptyBase){
-      if(loadState === 'error'){
-        $('#emptyTitle').textContent = 'Chargement impossible pour le moment';
-        $('#emptyText').textContent = "Vos données restent en ligne dans Supabase. Réessayez le chargement via le bandeau ci-dessus avant d'ajouter de nouveaux prospects.";
-      }else{
-        $('#emptyTitle').textContent = "Aucun prospect pour l'instant";
-        $('#emptyText').textContent = 'Ajoutez vos premiers gestionnaires de patrimoine à appeler pour démarrer votre liste de prospection.';
-      }
-    }
-
-    if(list.length === 0 && prospects.length > 0){
-      tbody.innerHTML = '<tr><td colspan="15" style="padding:34px;text-align:center;color:var(--ink-faint);">Aucun prospect ne correspond à votre recherche.</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = list.map(p => rowHtml(p)).join('');
-  }
-
-  function rowHtml(p){
-    const st = byKey(STATUTS, p.statut);
-    const pr = byKey(PRIORITES, p.priorite);
-    const statusOptions = STATUTS.map(s => '<option value="'+s.key+'" '+(s.key===p.statut?'selected':'')+'>'+s.label+'</option>').join('');
-    const prioOptions = PRIORITES.map(x => '<option value="'+x.key+'" '+(x.key===p.priorite?'selected':'')+'>'+x.label+'</option>').join('');
-
-    const tags = (p.produits && p.produits.length)
-      ? p.produits.map(k=>{ const pr2 = byKey(PRODUITS,k); return '<span class="tag" style="background:'+pr2.bg+';color:'+pr2.fg+'">'+pr2.label+'</span>'; }).join('')
-      : '<span class="tag-empty">+ ajouter</span>';
-
-    const phone = p.telephone ? '<a href="tel:'+p.telephone.replace(/\s/g,'')+'">'+escapeHtml(p.telephone)+'</a>' : '<span class="muted">—</span>';
-    const email = p.email ? '<a href="mailto:'+escapeHtml(p.email)+'">'+escapeHtml(p.email)+'</a>' : '<span class="muted">—</span>';
-    const web = p.siteweb ? '<a href="'+fullUrl(p.siteweb)+'" target="_blank" rel="noopener" title="'+escapeHtml(p.siteweb)+'">'+escapeHtml(domainOf(p.siteweb))+'</a>' : '<span class="muted">—</span>';
-
-    return '<tr data-id="'+p.id+'" class="status-border" style="--row-color:'+st.fg+'">'
-      + '<td class="col-nom">'+escapeHtml(p.nom)+'</td>'
-      + '<td class="col-prenom">'+escapeHtml(p.prenom)+'</td>'
-      + '<td>'+escapeHtml(p.societe)+'</td>'
-      + '<td>'+escapeHtml(p.ville)+'</td>'
-      + '<td class="cell-phone">'+phone+'</td>'
-      + '<td class="cell-email">'+email+'</td>'
-      + '<td class="cell-web">'+web+'</td>'
-      + '<td>'+ (p.typeCabinet ? escapeHtml(p.typeCabinet) : '<span class="muted">—</span>') +'</td>'
-      + '<td><div class="tags-cell" data-action="edit-produits">'+tags+'</div></td>'
-      + '<td><select class="status-select" data-action="change-statut" style="background-color:'+st.bg+';color:'+st.fg+'">'+statusOptions+'</select></td>'
-      + '<td class="date-cell '+dateClass(p.dernierContact)+'">'+ (p.dernierContact ? formatDate(p.dernierContact) : '<span class="muted">—</span>') +'</td>'
-      + '<td class="date-cell '+dateClass(p.prochaineRelance)+'">'+ (p.prochaineRelance ? formatDate(p.prochaineRelance) : '<span class="muted">—</span>') +'</td>'
-      + '<td><div class="priority-wrap"><span class="pdot" style="background:'+pr.fg+'"></span><select class="priority-select" data-action="change-priorite" style="padding-left:20px;color:'+pr.fg+'">'+prioOptions+'</select></div></td>'
-      + '<td class="notes-cell" data-action="edit-notes" title="'+escapeHtml(p.notes||'')+'">'+ (p.notes ? escapeHtml(p.notes) : '<span class="muted">Ajouter une note…</span>') +'</td>'
-      + '<td><div class="actions-cell" data-actions>'
-        + '<button class="icon-btn" data-action="call" title="Appeler et enregistrer le contact">'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.32 1.85.55 2.81.68A2 2 0 0 1 22 16.92z"/></svg>'
-        + '</button>'
-        + '<button class="icon-btn" data-action="edit" title="Modifier la fiche">'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
-        + '</button>'
-        + '<button class="icon-btn danger" data-action="delete" title="Supprimer">'
-          + '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>'
-        + '</button>'
-      + '</div></td>'
-      + '</tr>';
-  }
-
-  // ---------- Recherche / filtres / tri ----------
-  $('#searchInput').addEventListener('input', e => { query = e.target.value; renderTable(); });
-
-  filterbar.addEventListener('click', e => {
-    const chip = e.target.closest('.chip');
-    if(!chip) return;
-    statusFilter = chip.getAttribute('data-filter');
-    render();
+    renderTable();
   });
+});
 
-  document.querySelectorAll('th.sortable').forEach(th=>{
-    th.addEventListener('click', () => {
-      const f = th.getAttribute('data-sort');
-      if(sortField === f){ sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
-      else { sortField = f; sortDir = 'asc'; }
-      renderTable(); renderHeaderArrows();
-    });
-  });
-
-  // ---------- Interactions sur une ligne ----------
-  tbody.addEventListener('change', e => {
-    const tr = e.target.closest('tr'); if(!tr) return;
-    const id = tr.getAttribute('data-id');
-    const p = prospects.find(x=>x.id===id); if(!p) return;
-    const action = e.target.getAttribute('data-action');
-    if(action === 'change-statut'){
-      p.statut = e.target.value;
-      tr.style.setProperty('--row-color', byKey(STATUTS,p.statut).fg);
-      e.target.style.backgroundColor = byKey(STATUTS,p.statut).bg;
-      e.target.style.color = byKey(STATUTS,p.statut).fg;
-      renderFilterbar();
-      saveField(p);
-    }
-    if(action === 'change-priorite'){
-      p.priorite = e.target.value;
-      const pr = byKey(PRIORITES,p.priorite);
-      e.target.style.color = pr.fg;
-      tr.querySelector('.pdot').style.background = pr.fg;
-      saveField(p);
-    }
-  });
-
-  tbody.addEventListener('click', e => {
-    const tr = e.target.closest('tr'); if(!tr) return;
-    const id = tr.getAttribute('data-id');
-    const p = prospects.find(x=>x.id===id); if(!p) return;
-    const actionEl = e.target.closest('[data-action]');
-    if(!actionEl) return;
-    const action = actionEl.getAttribute('data-action');
-
-    if(action === 'call'){
-      if(p.statut === 'a_appeler') p.statut = 'appele';
-      p.dernierContact = todayISO();
-      render();
-      window.location.href = 'tel:' + (p.telephone||'').replace(/\s/g,'');
-      saveField(p);
-    }
-    if(action === 'edit'){ openModal(p); }
-    if(action === 'delete'){ showDeleteConfirm(tr, p); }
-    if(action === 'edit-produits'){ openProduitsPopover(actionEl, p); }
-    if(action === 'edit-notes'){ openNotesPopover(actionEl, p); }
-  });
-
-  function showDeleteConfirm(tr, p){
-    const cell = tr.querySelector('[data-actions]');
-    const original = cell.innerHTML;
-    cell.innerHTML = '<div class="confirm-delete">Supprimer ?<button class="yes">Oui</button><button class="no">Non</button></div>';
-    cell.querySelector('.yes').addEventListener('click', async () => {
-      cell.innerHTML = '<div class="confirm-delete">Suppression…</div>';
-      setSaveStatus('saving');
-      try{
-        await deleteProspectRemote(p.id);
-        prospects = prospects.filter(x=>x.id!==p.id);
-        setSaveStatus('saved');
-        render();
-      }catch(e){
-        console.error('Erreur de suppression :', e);
-        setSaveStatus('error');
-        alert('La suppression a échoué (' + (e.message||'erreur inconnue') + "). Le prospect n'a pas été supprimé.");
-        cell.innerHTML = original;
-      }
-    });
-    cell.querySelector('.no').addEventListener('click', () => { cell.innerHTML = original; });
+/* Restaurer préférences UI non critiques */
+(function restoreUiPrefs(){
+  const filters = loadUiPref('filters', null);
+  if(filters){
+    $('filterStatut').value = filters.statut || '';
+    $('filterPriorite').value = filters.priorite || '';
+    $('filterProduit').value = filters.produit || '';
   }
-
-  // ---------- Popovers ----------
-  function closePopover(){ popover.classList.remove('open'); popover.innerHTML=''; }
-  document.addEventListener('click', e => {
-    if(popover.classList.contains('open') && !popover.contains(e.target) && !e.target.closest('[data-action="edit-produits"]') && !e.target.closest('[data-action="edit-notes"]')){
-      closePopover();
-    }
-    if($('#menuPanel').classList.contains('open') && !e.target.closest('#menuWrap')){
-      $('#menuPanel').classList.remove('open');
-    }
-  });
-  function positionPopover(anchor){
-    const r = anchor.getBoundingClientRect();
-    let left = r.left;
-    if(left + 230 > window.innerWidth - 10) left = window.innerWidth - 240;
-    let top = r.bottom + 6;
-    popover.style.left = left + 'px';
-    popover.style.top = top + 'px';
-  }
-  function openProduitsPopover(anchor, p){
-    positionPopover(anchor);
-    popover.innerHTML = PRODUITS.map(pr=>{
-      const checked = (p.produits||[]).includes(pr.key) ? 'checked' : '';
-      return '<label><input type="checkbox" value="'+pr.key+'" '+checked+'><span class="tag" style="background:'+pr.bg+';color:'+pr.fg+'">'+pr.label+'</span></label>';
-    }).join('');
-    popover.classList.add('open');
-    popover.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-      cb.addEventListener('change', () => {
-        const set = new Set(p.produits||[]);
-        cb.checked ? set.add(cb.value) : set.delete(cb.value);
-        p.produits = Array.from(set);
-        renderTable();
-        saveField(p);
-      });
-    });
-  }
-  function openNotesPopover(anchor, p){
-    positionPopover(anchor);
-    popover.innerHTML = '<textarea>'+escapeHtml(p.notes||'')+'</textarea><div class="pop-actions"><button>Enregistrer</button></div>';
-    popover.classList.add('open');
-    const ta = popover.querySelector('textarea');
-    ta.focus();
-    popover.querySelector('button').addEventListener('click', () => {
-      p.notes = ta.value;
-      renderTable();
-      closePopover();
-      saveField(p);
-    });
-  }
-
-  // =========================================================
-  // Menu Données : sauvegarde JSON, restauration, CSV
-  // =========================================================
-  $('#btnMenu').addEventListener('click', () => { $('#menuPanel').classList.toggle('open'); });
-
-  $('#miExportBackup').addEventListener('click', () => {
-    $('#menuPanel').classList.remove('open');
-    const payload = { version: 1, app: 'Prospection CGP', exportedAt: new Date().toISOString(), prospects };
-    downloadFile('prospection-cgp-sauvegarde-' + todayISO() + '.json', JSON.stringify(payload, null, 2), 'application/json');
-  });
-
-  $('#miExportCsv').addEventListener('click', () => {
-    $('#menuPanel').classList.remove('open');
-    exportCSV();
-  });
-
-  $('#miImportBackup').addEventListener('click', () => {
-    $('#menuPanel').classList.remove('open');
-    $('#importFileInput').value = '';
-    $('#importFileInput').click();
-  });
-
-  $('#importFileInput').addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    let text;
-    try{ text = await file.text(); }
-    catch(err){ alert('Impossible de lire le fichier sélectionné.'); return; }
-    let parsed;
-    try{ parsed = JSON.parse(text); }
-    catch(err){ alert("Fichier invalide : ce n'est pas un JSON valide."); return; }
-    if(!parsed || !Array.isArray(parsed.prospects)){
-      alert('Fichier invalide : structure de sauvegarde non reconnue (le champ "prospects" est manquant).');
-      return;
-    }
-    const incoming = parsed.prospects;
-    showConfirm(
-      'Restaurer cette sauvegarde ?',
-      'Cette opération va remplacer vos ' + prospects.length + ' prospects actuels en ligne par les ' + incoming.length + ' prospects contenus dans le fichier' + (parsed.exportedAt ? (' (exporté le ' + new Date(parsed.exportedAt).toLocaleString('fr-FR') + ')') : '') + '. Cette action est irréversible.',
-      () => runFullRestore(incoming)
-    );
-  });
-
-  async function runFullRestore(incoming){
-    setSaveStatus('saving');
-    try{
-      const { error: delErr } = await supabaseClient.from('prospects').delete().eq('user_id', session.user.id);
-      if(delErr) throw delErr;
-      let inserted = [];
-      if(incoming.length){
-        const rows = incoming.map(p => Object.assign({ id: p.id || newId(), user_id: session.user.id }, prospectToRow(p)));
-        const { data, error } = await supabaseClient.from('prospects').insert(rows).select();
-        if(error) throw error;
-        inserted = (data || []).map(rowToProspect);
-      }
-      prospects = inserted;
-      setSaveStatus('saved');
-      render();
-    }catch(e){
-      console.error('Erreur de restauration :', e);
-      setSaveStatus('error');
-      alert('La restauration a échoué (' + (e.message||'erreur inconnue') + "). Vos données en ligne n'ont peut-être été que partiellement modifiées — vérifiez votre CRM, puis réessayez si besoin.");
-      await fetchProspects();
-    }
-  }
-
-  $('#miImportCsv').addEventListener('click', () => {
-    $('#menuPanel').classList.remove('open');
-    $('#importCsvInput').value = '';
-    $('#importCsvInput').click();
-  });
-
-  function parseCSV(text){
-    text = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-    const rows = []; let row = []; let field = ''; let inQuotes = false; let i = 0;
-    while(i < text.length){
-      const c = text[i];
-      if(inQuotes){
-        if(c === '"'){
-          if(text[i+1] === '"'){ field += '"'; i += 2; continue; }
-          inQuotes = false; i++; continue;
-        }
-        field += c; i++; continue;
-      }
-      if(c === '"'){ inQuotes = true; i++; continue; }
-      if(c === ';'){ row.push(field); field = ''; i++; continue; }
-      if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
-      field += c; i++;
-    }
-    if(field.length || row.length){ row.push(field); rows.push(row); }
-    return rows.filter(r => r.some(v => (v||'').trim() !== ''));
-  }
-  function normalizeDateFromCsv(v){
-    v = (v||'').trim();
-    if(!v) return '';
-    if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-    const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    if(m) return m[3]+'-'+m[2]+'-'+m[1];
-    return '';
-  }
-  function labelToKey(arr, label){
-    if(!label) return null;
-    const found = arr.find(x => x.label.toLowerCase() === label.trim().toLowerCase());
-    return found ? found.key : null;
-  }
-
-  $('#importCsvInput').addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if(!file) return;
-    let text;
-    try{ text = await file.text(); }
-    catch(err){ alert('Impossible de lire le fichier sélectionné.'); return; }
-
-    const rows = parseCSV(text);
-    if(rows.length < 2){
-      alert("Le fichier CSV est vide ou ne contient pas de données exploitables.");
-      e.target.value=''; return;
-    }
-    const headerRow = rows[0].map(h => h.trim().toLowerCase());
-    const dataRows = rows.slice(1);
-    const idx = (names) => headerRow.findIndex(h => names.includes(h));
-    const col = {
-      nom: idx(['nom']),
-      prenom: idx(['prénom','prenom']),
-      societe: idx(['société / cabinet','societe / cabinet','société','societe']),
-      ville: idx(['ville']),
-      telephone: idx(['téléphone','telephone']),
-      email: idx(['email']),
-      siteweb: idx(['site web','siteweb']),
-      typeCabinet: idx(['type de cabinet']),
-      produits: idx(['produits ciblés','produits cibles','produits']),
-      statut: idx(['statut']),
-      dernierContact: idx(['dernier contact']),
-      prochaineRelance: idx(['prochaine relance']),
-      priorite: idx(['priorité','priorite']),
-      notes: idx(['notes'])
-    };
-    if(col.nom === -1){
-      alert('Colonne "Nom" introuvable dans le fichier CSV. Utilisez de préférence un export généré par ce CRM.');
-      e.target.value=''; return;
-    }
-
-    const existingSignatures = new Set(prospects.map(p => (p.nom+'|'+p.prenom+'|'+p.societe+'|'+p.telephone).toLowerCase().trim()));
-    const toInsert = []; let skipped = 0;
-    dataRows.forEach(r => {
-      const nom = (r[col.nom]||'').trim();
-      if(!nom) return;
-      const prenom = col.prenom>-1 ? (r[col.prenom]||'').trim() : '';
-      const societe = col.societe>-1 ? (r[col.societe]||'').trim() : '';
-      const telephone = col.telephone>-1 ? (r[col.telephone]||'').trim() : '';
-      const signature = (nom+'|'+prenom+'|'+societe+'|'+telephone).toLowerCase().trim();
-      if(existingSignatures.has(signature)){ skipped++; return; }
-      existingSignatures.add(signature);
-      const produitsLabels = col.produits>-1 ? (r[col.produits]||'').split(',').map(s=>s.trim()).filter(Boolean) : [];
-      toInsert.push({
-        id: newId(), nom, prenom, societe,
-        ville: col.ville>-1 ? (r[col.ville]||'').trim() : '',
-        telephone,
-        email: col.email>-1 ? (r[col.email]||'').trim() : '',
-        siteweb: col.siteweb>-1 ? (r[col.siteweb]||'').trim() : '',
-        typeCabinet: col.typeCabinet>-1 ? (r[col.typeCabinet]||'').trim() : '',
-        statut: (col.statut>-1 && labelToKey(STATUTS, r[col.statut])) || 'a_appeler',
-        priorite: (col.priorite>-1 && labelToKey(PRIORITES, r[col.priorite])) || 'moyenne',
-        dernierContact: col.dernierContact>-1 ? normalizeDateFromCsv(r[col.dernierContact]) : '',
-        prochaineRelance: col.prochaineRelance>-1 ? normalizeDateFromCsv(r[col.prochaineRelance]) : '',
-        notes: col.notes>-1 ? (r[col.notes]||'').trim() : '',
-        produits: produitsLabels.map(l => labelToKey(PRODUITS,l)).filter(Boolean)
-      });
-    });
-
-    if(toInsert.length === 0){
-      alert('Aucun nouveau prospect à importer (' + skipped + ' ligne(s) ignorée(s), déjà présentes).');
-      e.target.value=''; return;
-    }
-    showConfirm(
-      'Importer ' + toInsert.length + ' prospect(s) ?',
-      'Le fichier contient ' + toInsert.length + ' nouveau(x) prospect(s) à importer' + (skipped>0 ? (' (' + skipped + " ligne(s) déjà existante(s) seront ignorée(s))") : '') + '. Ils seront ajoutés à votre liste actuelle et envoyés à Supabase.',
-      async () => { await runCsvImport(toInsert); e.target.value=''; }
-    );
-  });
-
-  async function runCsvImport(toInsert){
-    setSaveStatus('saving');
-    try{
-      const rows = toInsert.map(p => Object.assign({ id: p.id, user_id: session.user.id }, prospectToRow(p)));
-      const { data, error } = await supabaseClient.from('prospects').insert(rows).select();
-      if(error) throw error;
-      const added = (data || []).map(rowToProspect);
-      prospects = added.concat(prospects);
-      setSaveStatus('saved');
-      render();
-      alert(added.length + ' prospect(s) importé(s) avec succès.');
-    }catch(e){
-      console.error('Erreur import CSV :', e);
-      setSaveStatus('error');
-      alert("Échec de l'import (" + (e.message||'erreur inconnue') + "). Aucun prospect n'a été importé.");
-    }
-  }
-
-  function exportCSV(){
-    const headers = ['Nom','Prénom','Société / Cabinet','Ville','Téléphone','Email','Site web','Type de cabinet','Produits ciblés','Statut','Dernier contact','Prochaine relance','Priorité','Notes'];
-    const csvEscape = (v) => {
-      v = (v==null ? '' : String(v));
-      if(/[;"\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
-      return v;
-    };
-    const rows = prospects.map(p=>{
-      const statutLabel = byKey(STATUTS,p.statut).label;
-      const prioLabel = byKey(PRIORITES,p.priorite).label;
-      const produitsLabel = (p.produits||[]).map(k=>byKey(PRODUITS,k).label).join(', ');
-      return [p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email,p.siteweb,p.typeCabinet,produitsLabel,statutLabel,p.dernierContact,p.prochaineRelance,prioLabel,p.notes].map(csvEscape).join(';');
-    });
-    const csv = [headers.map(csvEscape).join(';')].concat(rows).join('\n');
-    downloadFile('prospection-cgp-' + todayISO() + '.csv', '\ufeff' + csv, 'text/csv;charset=utf-8');
-  }
-
-  // ---------- Confirmation générique ----------
-  function showConfirm(title, message, onConfirm){
-    $('#confirmTitle').textContent = title;
-    $('#confirmMessage').textContent = message;
-    pendingConfirmCallback = onConfirm;
-    confirmOverlay.classList.add('open');
-  }
-  function closeConfirm(){ confirmOverlay.classList.remove('open'); pendingConfirmCallback = null; }
-  $('#confirmCancel').addEventListener('click', closeConfirm);
-  $('#confirmOk').addEventListener('click', () => {
-    const cb = pendingConfirmCallback;
-    closeConfirm();
-    if(cb) cb();
-  });
-  confirmOverlay.addEventListener('click', e => { if(e.target === confirmOverlay) closeConfirm(); });
-
-  // =========================================================
-  // Modale ajout / édition
-  // =========================================================
-  function fillSelect(sel, arr){
-    sel.innerHTML = arr.map(x => '<option value="'+x.key+'">'+x.label+'</option>').join('');
-  }
-  fillSelect($('#f_statut'), STATUTS);
-  fillSelect($('#f_priorite'), PRIORITES);
-  $('#f_produits').innerHTML = PRODUITS.map(pr =>
-    '<label><input type="checkbox" value="'+pr.key+'"> '+pr.label+'</label>'
-  ).join('');
-
-  function openModal(p){
-    editingId = p ? p.id : null;
-    modalError.style.display = 'none';
-    $('#modalTitle').textContent = p ? 'Modifier le prospect' : 'Ajouter un prospect';
-    $('#f_nom').value = p ? p.nom||'' : '';
-    $('#f_nom').style.borderColor = '';
-    $('#f_prenom').value = p ? p.prenom||'' : '';
-    $('#f_societe').value = p ? p.societe||'' : '';
-    $('#f_ville').value = p ? p.ville||'' : '';
-    $('#f_telephone').value = p ? p.telephone||'' : '';
-    $('#f_email').value = p ? p.email||'' : '';
-    $('#f_siteweb').value = p ? p.siteweb||'' : '';
-    $('#f_typeCabinet').value = p ? p.typeCabinet||'' : '';
-    $('#f_statut').value = p ? p.statut||'a_appeler' : 'a_appeler';
-    $('#f_priorite').value = p ? p.priorite||'moyenne' : 'moyenne';
-    $('#f_dernierContact').value = p ? p.dernierContact||'' : '';
-    $('#f_prochaineRelance').value = p ? p.prochaineRelance||'' : '';
-    $('#f_notes').value = p ? p.notes||'' : '';
-    const produitsSet = new Set(p ? p.produits||[] : []);
-    $('#f_produits').querySelectorAll('input[type=checkbox]').forEach(cb=>{ cb.checked = produitsSet.has(cb.value); });
-    overlay.classList.add('open');
-    setTimeout(()=>$('#f_nom').focus(), 30);
-  }
-  function closeModal(){ overlay.classList.remove('open'); editingId = null; }
-
-  $('#btnAdd').addEventListener('click', () => openModal(null));
-  $('#btnAddEmpty').addEventListener('click', () => openModal(null));
-  $('#btnCancel').addEventListener('click', closeModal);
-  overlay.addEventListener('click', e => { if(e.target === overlay) closeModal(); });
-
-  $('#btnSave').addEventListener('click', async () => {
-    const nom = $('#f_nom').value.trim();
-    if(!nom){ $('#f_nom').focus(); $('#f_nom').style.borderColor = 'var(--danger)'; return; }
-    const produits = Array.from($('#f_produits').querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.value);
-    const data = {
-      nom,
-      prenom: $('#f_prenom').value.trim(),
-      societe: $('#f_societe').value.trim(),
-      ville: $('#f_ville').value.trim(),
-      telephone: $('#f_telephone').value.trim(),
-      email: $('#f_email').value.trim(),
-      siteweb: $('#f_siteweb').value.trim(),
-      typeCabinet: $('#f_typeCabinet').value.trim(),
-      statut: $('#f_statut').value,
-      priorite: $('#f_priorite').value,
-      dernierContact: $('#f_dernierContact').value,
-      prochaineRelance: $('#f_prochaineRelance').value,
-      notes: $('#f_notes').value.trim(),
-      produits
-    };
-    modalError.style.display = 'none';
-    const btn = $('#btnSave');
-    btn.disabled = true; btn.textContent = 'Enregistrement…';
-    setSaveStatus('saving');
-    try{
-      if(editingId){
-        const existing = prospects.find(x=>x.id===editingId);
-        const merged = Object.assign({}, existing, data, { id: editingId });
-        await updateProspectRemote(merged);
-        const idx = prospects.findIndex(x=>x.id===editingId);
-        if(idx>-1) prospects[idx] = merged;
-      }else{
-        const created = Object.assign({ id: newId() }, data);
-        const saved = await insertProspectRemote(created);
-        prospects.unshift(saved);
-      }
-      setSaveStatus('saved');
-      closeModal();
-      render();
-    }catch(e){
-      console.error('Erreur d\u2019enregistrement :', e);
-      setSaveStatus('error');
-      modalError.textContent = "Erreur : impossible d'enregistrer sur Supabase (" + (e.message||'erreur inconnue') + '). Vos informations saisies sont conservées dans ce formulaire — réessayez.';
-      modalError.style.display = 'block';
-    }finally{
-      btn.disabled = false; btn.textContent = 'Enregistrer';
-    }
-  });
-
-  document.addEventListener('keydown', e => {
-    if(e.key === 'Escape'){ closeModal(); closeConfirm(); closePopover(); $('#menuPanel').classList.remove('open'); }
-  });
-
-  // =========================================================
-  // Authentification
-  // =========================================================
-  function showLogin(message){
-    loadingScreen.style.display = 'none';
-    appRoot.style.display = 'none';
-    loginScreen.style.display = 'flex';
-    if(message){ loginError.textContent = message; loginError.style.display = 'block'; }
-    else { loginError.style.display = 'none'; }
-    loginPassword.value = '';
-    stopRealtime();
-  }
-
-  async function enterApp(){
-    loginScreen.style.display = 'none';
-    loadingScreen.style.display = 'flex';
-    loadingText.textContent = 'Chargement de vos prospects…';
-    appRoot.style.display = 'none';
-    await fetchProspects();
-    loadingScreen.style.display = 'none';
-    appRoot.style.display = 'block';
-    startRealtime();
-  }
-
-  async function doLogin(){
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value;
-    if(!email || !password){
-      loginError.textContent = 'Merci de renseigner votre email et votre mot de passe.';
-      loginError.style.display = 'block';
-      return;
-    }
-    btnLogin.disabled = true; btnLogin.textContent = 'Connexion…';
-    loginError.style.display = 'none';
-    try{
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if(error) throw error;
-      session = data.session;
-      await enterApp();
-    }catch(e){
-      console.error('Erreur de connexion :', e);
-      loginError.textContent = 'Connexion impossible : ' + (e.message || 'identifiants invalides.');
-      loginError.style.display = 'block';
-    }finally{
-      btnLogin.disabled = false; btnLogin.textContent = 'Se connecter';
-    }
-  }
-  btnLogin.addEventListener('click', doLogin);
-  loginEmail.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
-  loginPassword.addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
-
-  $('#btnLogout').addEventListener('click', async () => {
-    explicitLogout = true;
-    try{ await supabaseClient.auth.signOut(); }
-    catch(e){ console.error('Erreur de déconnexion :', e); }
-  });
-
-  supabaseClient.auth.onAuthStateChange((event, newSession) => {
-    if(event === 'SIGNED_OUT'){
-      session = null;
-      prospects = [];
-      showLogin(explicitLogout ? null : 'Votre session a expiré, merci de vous reconnecter.');
-      explicitLogout = false;
-    } else if(event === 'SIGNED_IN'){
-      session = newSession;
-      if(appRoot.style.display === 'none' && loadingScreen.style.display === 'none'){
-        enterApp();
-      }
-    } else if(event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED'){
-      session = newSession;
-    }
-  });
-
-  // =========================================================
-  // Synchronisation temps réel (uniquement les données de
-  // l'utilisateur connecté, filtrées côté serveur par user_id)
-  // =========================================================
-  function startRealtime(){
-    if(realtimeChannel || !session) return;
-    realtimeChannel = supabaseClient
-      .channel('prospects-user-' + session.user.id)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'prospects', filter: 'user_id=eq.' + session.user.id },
-        (payload) => handleRealtimeEvent(payload)
-      )
-      .subscribe();
-  }
-  function stopRealtime(){
-    if(realtimeChannel){ supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
-  }
-  function handleRealtimeEvent(payload){
-    if(payload.eventType === 'INSERT'){
-      const p = rowToProspect(payload.new);
-      if(!prospects.find(x=>x.id===p.id)){ prospects.unshift(p); render(); }
-    }else if(payload.eventType === 'UPDATE'){
-      const p = rowToProspect(payload.new);
-      const idx = prospects.findIndex(x=>x.id===p.id);
-      if(idx>-1){ prospects[idx] = p; render(); }
-    }else if(payload.eventType === 'DELETE'){
-      const oldId = payload.old && payload.old.id;
-      if(oldId && prospects.find(x=>x.id===oldId)){ prospects = prospects.filter(x=>x.id!==oldId); render(); }
-    }
-  }
-
-  // ---------- Bandeau hors connexion ----------
-  window.addEventListener('offline', () => { offlineBanner.style.display = 'flex'; document.body.classList.add('has-offline-banner'); });
-  window.addEventListener('online', () => { offlineBanner.style.display = 'none'; document.body.classList.remove('has-offline-banner'); });
-
-  // =========================================================
-  // Démarrage : vérifier la session avant d'afficher quoi que ce soit
-  // =========================================================
-  async function init(){
-    loadingScreen.style.display = 'flex';
-    loginScreen.style.display = 'none';
-    appRoot.style.display = 'none';
-    try{
-      const { data, error } = await supabaseClient.auth.getSession();
-      if(error) throw error;
-      session = data.session;
-    }catch(e){
-      console.error('Erreur lors de la vérification de session :', e);
-      session = null;
-    }
-    if(session){ await enterApp(); }
-    else{ showLogin(); }
-  }
-
-  init();
+  const sort = loadUiPref('sort', null);
+  if(sort) sortState = sort;
 })();
+
+/* ============================================================
+   IMPORT CSV
+   ============================================================ */
+$('importBtn').addEventListener('click', ()=>$('csvFileInput').click());
+$('csvFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const text = await file.text();
+  await importCsv(text);
+  e.target.value = '';
+});
+
+function parseCsv(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+  if(!lines.length) return [];
+  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
+  return lines.slice(1).map(line=>{
+    const cols = line.split(',');
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = (cols[i]||'').trim());
+    return obj;
+  });
+}
+
+async function importCsv(text){
+  setSaveIndicator('saving', 'Import en cours…');
+  const rows = parseCsv(text);
+  if(!rows.length){
+    setSaveIndicator('idle','Connecté');
+    showGlobalError('Le fichier CSV est vide ou illisible.');
+    return;
+  }
+
+  const existingKeys = new Set(prospects.map(p=>(p.nom+p.email+p.telephone).toLowerCase()));
+  const toInsert = [];
+  rows.forEach(r=>{
+    const nom = r.nom || r.name || '';
+    if(!nom) return;
+    const email = r.email || '';
+    const telephone = r.telephone || r.tel || '';
+    const key = (nom+email+telephone).toLowerCase();
+    if(existingKeys.has(key)) return; // anti-doublon simple
+    existingKeys.add(key);
+    toInsert.push({
+      id: crypto.randomUUID(),
+      user_id: session.user.id,
+      nom, prenom: r.prenom || '',
+      societe: r.societe || '', ville: r.ville || '',
+      telephone, email,
+      siteweb: r.siteweb || '',
+      type_cabinet: r.typecabinet || r.type_cabinet || '',
+      statut: STATUTS.includes(r.statut) ? r.statut : 'À appeler',
+      priorite: ['Haute','Moyenne','Basse'].includes(r.priorite) ? r.priorite : 'Moyenne',
+      dernier_contact: r.dernier_contact || r.dernierco || null,
+      prochaine_relance: r.prochaine_relance || null,
+      notes: r.notes || '',
+      produits: r.produits ? r.produits.split(';').map(s=>s.trim()).filter(Boolean) : []
+    });
+  });
+
+  if(!toInsert.length){
+    setSaveIndicator('idle','Connecté');
+    showGlobalError('Aucun nouveau prospect à importer (doublons ou fichier vide).');
+    return;
+  }
+
+  try{
+    const { data, error } = await supabaseClient.from('prospects').insert(toInsert).select();
+    if(error){
+      setSaveIndicator('error','Erreur de sauvegarde');
+      showGlobalError("Échec de l'import CSV : " + error.message);
+      return;
+    }
+    (data||[]).forEach(row=> prospects.unshift(rowToProspect(row)));
+    setSaveIndicator('saved','Enregistré');
+    renderAll();
+    alert(`${data.length} prospect(s) importé(s) avec succès.`);
+  }catch(e){
+    setSaveIndicator('error','Erreur de sauvegarde');
+    showGlobalError("Erreur réseau pendant l'import CSV.");
+  }
+}
+
+/* ============================================================
+   EXPORT CSV
+   ============================================================ */
+$('exportBtn').addEventListener('click', ()=>{
+  const list = getFilteredSorted();
+  const headers = ['nom','prenom','societe','ville','telephone','email','siteweb','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','notes','produits'];
+  const csvRows = [headers.join(',')];
+  list.forEach(p=>{
+    const row = [
+      p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email,p.siteweb,p.typeCabinet,
+      p.statut,p.priorite,p.dernierContact||'',p.prochaineRelance||'',
+      (p.notes||'').replace(/[\r\n,]/g,' '),
+      (p.produits||[]).join(';')
+    ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`);
+    csvRows.push(row.join(','));
+  });
+  const blob = new Blob([csvRows.join('\n')], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'prospects_export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+window.addEventListener('error', (e)=>{
+  const msg = (e && e.message) ? e.message : 'Erreur inconnue au chargement.';
+  $('loadingText').innerHTML = '⚠️ ' + msg + '<br><small style="color:var(--muted);">Ouvrez la console (F12) pour plus de détails. Vérifiez SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY.</small>';
+});
+
+try{
+  checkSessionOnLoad();
+}catch(e){
+  $('loadingText').innerHTML = '⚠️ Erreur au démarrage : ' + e.message;
+}
 </script>
 </body>
 </html>
