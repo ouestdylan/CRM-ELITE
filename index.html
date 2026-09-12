@@ -224,6 +224,13 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   select.inline-select, input.inline-select{
     border:1px solid var(--line); border-radius:6px; padding:5px 7px; font-size:12.5px; background:#fff; color:var(--ink);
   }
+  .field-clear{display:flex; align-items:center; gap:4px;}
+  .field-clear .inline-select, .field-clear input{flex:1; min-width:0;}
+  .clear-btn{
+    flex:0 0 auto; border:1px solid var(--line); background:#fff; color:var(--muted);
+    border-radius:6px; width:24px; height:24px; font-size:12px; line-height:1; padding:0;
+  }
+  .clear-btn:hover{background:var(--red-soft); border-color:#e3bcbc; color:var(--red);}
   .badge{
     display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:600;
   }
@@ -465,9 +472,15 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
             <option value="Basse">Basse</option>
           </select>
         </div>
-        <div><label>Dernier contact</label><input type="date" id="f_dernierContact"></div>
-        <div><label>Prochaine relance</label><input type="date" id="f_prochaineRelance"></div>
-        <div class="full"><label>Date &amp; heure du RDV</label><input type="datetime-local" id="f_dateRdv"></div>
+        <div><label>Dernier contact</label>
+          <div class="field-clear"><input type="date" id="f_dernierContact"><button type="button" class="clear-btn" onclick="clearFormField('f_dernierContact')" title="Effacer">✕</button></div>
+        </div>
+        <div><label>Prochaine relance</label>
+          <div class="field-clear"><input type="date" id="f_prochaineRelance"><button type="button" class="clear-btn" onclick="clearFormField('f_prochaineRelance')" title="Effacer">✕</button></div>
+        </div>
+        <div class="full"><label>Date &amp; heure du RDV</label>
+          <div class="field-clear"><input type="datetime-local" id="f_dateRdv"><button type="button" class="clear-btn" onclick="clearFormField('f_dateRdv')" title="Effacer">✕</button></div>
+        </div>
         <div class="full">
           <label>Produits</label>
           <div class="chip-group" id="chipGroupCGP">
@@ -1090,6 +1103,13 @@ function showFormError(msg){
 }
 function hideFormError(){ $('formError').style.display = 'none'; }
 
+/* Vide un champ du formulaire (bouton ✕ à côté des dates) sans rien enregistrer
+   tant que le formulaire n'est pas soumis. */
+function clearFormField(fieldId){
+  const el = $(fieldId);
+  if(el) el.value = '';
+}
+
 function openProspectModal(id){
   currentEditId = id || null;
   hideFormError();
@@ -1302,10 +1322,16 @@ function renderTable(){
         </select>
       </td>
       <td>
-        <input type="datetime-local" class="inline-select" value="${isoToLocalInput(p.dateRdv)}" onchange="onDateRdvChange('${p.id}', this.value)">
+        <div class="field-clear">
+          <input type="datetime-local" class="inline-select" value="${isoToLocalInput(p.dateRdv)}" onchange="onDateRdvChange('${p.id}', this.value)">
+          ${p.dateRdv ? `<button type="button" class="clear-btn" onclick="onDateRdvChange('${p.id}', '')" title="Effacer le RDV">✕</button>` : ''}
+        </div>
       </td>
       <td>
-        <input type="date" class="inline-select" value="${p.prochaineRelance||''}" onchange="quickUpdate('${p.id}','prochaineRelance',this.value)">
+        <div class="field-clear">
+          <input type="date" class="inline-select" value="${p.prochaineRelance||''}" onchange="quickUpdate('${p.id}','prochaineRelance',this.value)">
+          ${p.prochaineRelance ? `<button type="button" class="clear-btn" onclick="quickUpdate('${p.id}','prochaineRelance', null)" title="Effacer la relance">✕</button>` : ''}
+        </div>
       </td>
       <td>${p.budget != null ? formatEuro(p.budget) : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
 <td><div class="produit-tags">${produitsHtml || '<span style="color:var(--muted); font-size:12px;">—</span>'}</div></td>
