@@ -358,7 +358,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <thead>
           <tr>
             <th data-sort="nom">Contact</th>
-            <th data-sort="societe">Société / Ville</th>
+            <th data-sort="societe">Société / Adresse</th>
             <th>Téléphone</th>
             <th data-sort="domaine">Domaine</th>
             <th data-sort="type_cabinet">Type</th>
@@ -401,6 +401,8 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <div><label>Prénom</label><input type="text" id="f_prenom"></div>
         <div><label>Nom</label><input type="text" id="f_nom" required></div>
         <div><label>Société</label><input type="text" id="f_societe"></div>
+        <div><label>Adresse</label><input type="text" id="f_adresse"></div>
+        <div><label>Code postal</label><input type="text" id="f_codePostal"></div>
         <div><label>Ville</label><input type="text" id="f_ville"></div>
         <div><label>Téléphone</label><input type="text" id="f_telephone"></div>
         <div><label>Email</label><input type="email" id="f_email"></div>
@@ -453,6 +455,31 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <button type="submit" class="btn btn-primary" id="saveProspectBtn" style="width:auto;">Enregistrer</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- MODAL MAPPING IMPORT CSV (fichier sans ligne d'en-têtes) -->
+<div class="modal-overlay" id="importMappingModalOverlay">
+  <div class="modal" style="max-width:780px;">
+    <h2>Faire correspondre les colonnes</h2>
+    <p class="modal-sub">Votre fichier ne semble pas avoir de ligne d'en-têtes reconnaissable : la première ligne contient déjà des données. Indiquez à quoi correspond chaque colonne (une valeur d'exemple tirée de la 1ère ligne est affichée) — <strong id="importMappingRowCount"></strong> ligne(s) seront importées.</p>
+    <div class="form-error" id="mappingFormError"></div>
+    <div style="max-height:420px; overflow-y:auto; border:1px solid var(--line); border-radius:8px;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="background:#fbfaf7;">
+            <th style="text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);">Colonne</th>
+            <th style="text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);">Exemple (1ère ligne)</th>
+            <th style="text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);">Correspond à</th>
+          </tr>
+        </thead>
+        <tbody id="importMappingBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cancelMappingBtn">Annuler</button>
+      <button type="button" class="btn btn-primary" id="confirmMappingBtn" style="width:auto;">Importer</button>
+    </div>
   </div>
 </div>
 
@@ -633,6 +660,8 @@ function rowToProspect(row){
     nom: row.nom || '',
     prenom: row.prenom || '',
     societe: row.societe || '',
+    adresse: row.adresse || '',
+    codePostal: row.code_postal || '',
     ville: row.ville || '',
     telephone: row.telephone || '',
     email: row.email || '',
@@ -653,7 +682,8 @@ budget: row.budget != null ? Number(row.budget) : null,
 
 function prospectToRow(p, userId){
   return {
-    nom: p.nom, prenom: p.prenom, societe: p.societe, ville: p.ville,
+    nom: p.nom, prenom: p.prenom, societe: p.societe,
+    adresse: p.adresse, code_postal: p.codePostal, ville: p.ville,
     telephone: p.telephone, email: p.email, siteweb: p.siteweb,
     type_cabinet: p.typeCabinet, domaine: p.domaine === 'Solaire' ? 'Solaire' : 'CGP',
     statut: p.statut, priorite: p.priorite,
@@ -929,6 +959,8 @@ function openProspectModal(id){
   $('f_prenom').value = p ? p.prenom : '';
   $('f_nom').value = p ? p.nom : '';
   $('f_societe').value = p ? p.societe : '';
+  $('f_adresse').value = p ? p.adresse : '';
+  $('f_codePostal').value = p ? p.codePostal : '';
   $('f_ville').value = p ? p.ville : '';
   $('f_telephone').value = p ? p.telephone : '';
   $('f_email').value = p ? p.email : '';
@@ -967,6 +999,8 @@ $('prospectForm').addEventListener('submit', async (e)=>{
     prenom: $('f_prenom').value.trim(),
     nom,
     societe: $('f_societe').value.trim(),
+    adresse: $('f_adresse').value.trim(),
+    codePostal: $('f_codePostal').value.trim(),
     ville: $('f_ville').value.trim(),
     telephone: $('f_telephone').value.trim(),
     email: $('f_email').value.trim(),
@@ -1104,7 +1138,7 @@ function renderTable(){
       </td>
       <td>
         <div>${escapeHtml(p.societe||'—')}</div>
-        <span style="color:var(--muted); font-size:12px;">${escapeHtml(p.ville||'')}</span>
+        <span style="color:var(--muted); font-size:12px;">${escapeHtml([p.adresse, [p.codePostal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span>
       </td>
       <td>${p.telephone ? `<a class="tel-link" href="tel:${escapeHtml(p.telephone)}" onclick="onCallClick('${p.id}')">${escapeHtml(p.telephone)}</a>` : '—'}</td>
       <td><span class="badge ${domaineBadgeClass}">${p.domaine}</span></td>
@@ -1172,15 +1206,16 @@ function renderAll(){
 })();
 
 /* ============================================================
-   IMPORT CSV — parseur robuste (virgule OU point-virgule, guillemets,
-   accents dans les en-têtes, BOM Excel/Google Sheets)
+   IMPORT CSV — tokenizer robuste (virgule OU point-virgule, guillemets,
+   accents, BOM Excel/Google Sheets) + détection d'en-tête + mapping
+   manuel quand le fichier n'a pas de ligne d'en-têtes du tout.
    ============================================================ */
 $('importBtn').addEventListener('click', ()=>$('csvFileInput').click());
 $('csvFileInput').addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const text = await file.text();
-  await importCsv(text);
+  handleCsvFile(text);
   e.target.value = '';
 });
 
@@ -1197,13 +1232,21 @@ function detectDelimiter(text){
   return semis > commas ? ';' : ',';
 }
 
-/* Parseur CSV "à la main" : gère les champs entre guillemets (avec
-   virgules/points-virgules/retours à la ligne à l'intérieur), le
-   BOM UTF-8 de Google Sheets/Excel, et détecte automatiquement le
-   séparateur (virgule ou point-virgule selon les paramètres régionaux). */
-function parseCsv(text){
+/* Un en-tête "nom" reconnu : nom exact, ou toute colonne contenant le
+   mot entier "nom" (ex. "nom du contact") — mais PAS "prenom". */
+function findNomHeaderKey(headers){
+  if(headers.includes('nom')) return 'nom';
+  if(headers.includes('name')) return 'name';
+  const match = headers.find(h => /\bnom\b/.test(h) || /\bname\b/.test(h));
+  return match || null;
+}
+
+/* Tokenizer CSV "à la main" : gère les champs entre guillemets (avec
+   séparateurs/retours à la ligne à l'intérieur), le BOM UTF-8 de Google
+   Sheets/Excel, et détecte automatiquement le séparateur de colonnes. */
+function tokenizeCsv(text){
   text = String(text||'').replace(/^\uFEFF/, ''); // retire le BOM éventuel
-  if(!text.trim()) return { rows: [], delimiter: ',' };
+  if(!text.trim()) return { rawRows: [], delimiter: ',' };
 
   const delimiter = detectDelimiter(text);
   const rawRows = [];
@@ -1226,28 +1269,178 @@ function parseCsv(text){
   if(field.length || row.length){ row.push(field); rawRows.push(row); }
 
   const nonEmptyRows = rawRows.filter(r => r.some(c => String(c).trim().length));
-  if(!nonEmptyRows.length) return { rows: [], delimiter };
-
-  const headers = nonEmptyRows[0].map(h => stripAccents(h).trim().toLowerCase());
-  const rows = nonEmptyRows.slice(1).map(cols=>{
-    const obj = {};
-    headers.forEach((h,i)=> obj[h] = (cols[i]!=null ? String(cols[i]) : '').trim());
-    return obj;
-  });
-  return { rows, delimiter };
+  return { rawRows: nonEmptyRows, delimiter };
 }
 
-async function importCsv(text){
-  setSaveIndicator('saving', 'Import en cours…');
-  const { rows, delimiter } = parseCsv(text);
-  if(!rows.length){
-    setSaveIndicator('idle','Connecté');
-    showGlobalError('Le fichier CSV est vide, illisible, ou ne contient pas de ligne d\'en-tête reconnaissable.');
+/* Cherche, parmi les 10 premières lignes non vides, celle qui ressemble
+   à une ligne d'en-têtes (contient une colonne "nom" reconnaissable).
+   Retourne -1 si aucune ligne ne ressemble à un en-tête. */
+function findHeaderRowIndex(rawRows){
+  const searchLimit = Math.min(10, rawRows.length);
+  for(let i=0; i<searchLimit; i++){
+    const candidate = rawRows[i].map(h => stripAccents(h).trim().toLowerCase());
+    if(findNomHeaderKey(candidate)) return i;
+  }
+  return -1;
+}
+
+/* Les clés ci-dessous sont celles utilisées par processImportRows() pour
+   lire chaque valeur — elles correspondent à ce que produit la
+   normalisation des en-têtes (accents retirés, espaces conservés). */
+const IMPORT_FIELD_OPTIONS = [
+  { key:'ignore',            label:'— Ignorer cette colonne —' },
+  { key:'nom_complet',       label:'Nom complet (Prénom + Nom)' },
+  { key:'nom',                label:'Nom' },
+  { key:'prenom',             label:'Prénom' },
+  { key:'societe',            label:'Société' },
+  { key:'adresse',            label:'Adresse' },
+  { key:'code postal',        label:'Code postal' },
+  { key:'ville',               label:'Ville' },
+  { key:'telephone',          label:'Téléphone' },
+  { key:'email',               label:'Email' },
+  { key:'site web',           label:'Site web' },
+  { key:'domaine',            label:'Domaine (CGP / Solaire)' },
+  { key:'type de cabinet',    label:'Type de cabinet / structure' },
+  { key:'statut',              label:'Statut' },
+  { key:'priorite',           label:'Priorité' },
+  { key:'budget',              label:'Budget' },
+  { key:'dernier contact',    label:'Dernier contact' },
+  { key:'prochaine relance',  label:'Prochaine relance' },
+  { key:'produits',           label:'Produits' },
+  { key:'notes',               label:'Notes' }
+];
+
+/* Pré-suggestion du champ correspondant à une colonne, à partir d'un
+   exemple de valeur. Reste volontairement prudent : en cas de doute,
+   suggère "Ignorer" plutôt que de mal mapper une colonne. */
+function guessImportField(sample){
+  const v = String(sample||'').trim();
+  if(!v) return 'ignore';
+  if(/^tel:/i.test(v)) return 'ignore';
+  if(STATUTS.includes(v)) return 'statut';
+  if(['Haute','Moyenne','Basse'].includes(v)) return 'priorite';
+  if(/^\d{4,5}$/.test(v)) return 'code postal';
+  if(/@/.test(v)) return 'email';
+  if(/^(https?:\/\/|www\.)/i.test(v)) return 'site web';
+  if(/^[\d\s()+.-]{6,}$/.test(v)) return 'telephone';
+  if(/^\d+\s*[a-zA-Z]?\s+.+/.test(v) || /\b(avenue|rue|boulevard|chemin|route|impasse|allée|place)\b/i.test(stripAccents(v))) return 'adresse';
+  const words = v.split(/\s+/);
+  if(words.length === 2){
+    const firstAllCaps = words[0] === words[0].toUpperCase() && /[A-ZÀ-Ý]/.test(words[0]);
+    const secondAllCaps = words[1] === words[1].toUpperCase() && words[1].length > 1 && /[A-ZÀ-Ý]/.test(words[1]);
+    // "Céline MADEUF" (prénom en casse normale, nom en majuscules) -> personne.
+    // "FÉLIX PATRIMOINE" (tout en majuscules) -> plus probablement une société.
+    if(secondAllCaps && !firstAllCaps) return 'nom_complet';
+    if(firstAllCaps && secondAllCaps) return 'societe';
+  }
+  if(words.length === 1 && v === v.toUpperCase() && /^[A-ZÀ-Ý-]+$/.test(v)) return 'ville';
+  return 'ignore';
+}
+
+let pendingImportRawRows = null;
+let pendingImportDelimiter = ',';
+
+function handleCsvFile(text){
+  const { rawRows, delimiter } = tokenizeCsv(text);
+  if(!rawRows.length){
+    showGlobalError("Le fichier CSV est vide ou illisible.");
     return;
   }
 
-  // Séparateur utilisé pour la sous-liste "produits" à l'intérieur d'une cellule :
-  // on prend l'inverse du séparateur de colonnes détecté pour éviter tout conflit.
+  const headerIdx = findHeaderRowIndex(rawRows);
+  if(headerIdx !== -1){
+    // Fichier avec en-têtes : on construit directement les objets.
+    const headers = rawRows[headerIdx].map(h => stripAccents(h).trim().toLowerCase());
+    const records = rawRows.slice(headerIdx + 1).map(cols=>{
+      const obj = {};
+      headers.forEach((h,i)=> obj[h] = (cols[i]!=null ? String(cols[i]) : '').trim());
+      return obj;
+    });
+    processImportRows(records, delimiter);
+  } else {
+    // Pas d'en-têtes détectées : on demande un mapping manuel des colonnes.
+    pendingImportRawRows = rawRows;
+    pendingImportDelimiter = delimiter;
+    openImportMappingModal(rawRows);
+  }
+}
+
+function openImportMappingModal(rawRows){
+  const colCount = Math.max(...rawRows.slice(0, 5).map(r=>r.length));
+  const sampleRow = rawRows[0] || [];
+  const lastMapping = loadUiPref('lastImportMapping', null);
+
+  $('importMappingRowCount').textContent = rawRows.length;
+  $('mappingFormError').style.display = 'none';
+
+  let html = '';
+  for(let i=0; i<colCount; i++){
+    const sample = sampleRow[i] != null ? String(sampleRow[i]) : '';
+    const preselect = (lastMapping && lastMapping.length === colCount) ? lastMapping[i] : guessImportField(sample);
+    html += `<tr>
+      <td style="padding:8px 10px; border-bottom:1px solid #efece3; color:var(--muted);">Colonne ${i+1}</td>
+      <td style="padding:8px 10px; border-bottom:1px solid #efece3; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(sample)}">${escapeHtml(sample) || '<span style="color:var(--muted);">(vide)</span>'}</td>
+      <td style="padding:8px 10px; border-bottom:1px solid #efece3;">
+        <select class="inline-select" data-col="${i}" style="width:100%;">
+          ${IMPORT_FIELD_OPTIONS.map(o=>`<option value="${o.key}" ${o.key===preselect?'selected':''}>${o.label}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`;
+  }
+  $('importMappingBody').innerHTML = html;
+  $('importMappingModalOverlay').style.display = 'flex';
+}
+
+$('cancelMappingBtn').addEventListener('click', ()=>{
+  $('importMappingModalOverlay').style.display = 'none';
+  pendingImportRawRows = null;
+});
+$('importMappingModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'importMappingModalOverlay'){ $('importMappingModalOverlay').style.display = 'none'; pendingImportRawRows = null; }
+});
+
+$('confirmMappingBtn').addEventListener('click', ()=>{
+  if(!pendingImportRawRows) return;
+  const selects = Array.from(document.querySelectorAll('#importMappingBody select[data-col]'));
+  const mapping = selects.map(s=>s.value); // index de colonne -> clé cible
+
+  if(!mapping.some(m => m === 'nom' || m === 'nom_complet')){
+    $('mappingFormError').textContent = "Associez au moins une colonne à « Nom » ou « Nom complet » pour pouvoir importer.";
+    $('mappingFormError').style.display = 'block';
+    return;
+  }
+
+  saveUiPref('lastImportMapping', mapping);
+
+  const records = pendingImportRawRows.map(cols=>{
+    const obj = {};
+    mapping.forEach((targetKey, colIdx)=>{
+      if(targetKey === 'ignore') return;
+      const raw = cols[colIdx] != null ? String(cols[colIdx]).trim() : '';
+      if(targetKey === 'nom_complet'){
+        if(!raw) return;
+        const parts = raw.split(/\s+/);
+        if(parts.length > 1){ obj.nom = parts.pop(); obj.prenom = parts.join(' '); }
+        else { obj.nom = raw; }
+      } else {
+        obj[targetKey] = raw;
+      }
+    });
+    return obj;
+  });
+
+  $('importMappingModalOverlay').style.display = 'none';
+  processImportRows(records, pendingImportDelimiter);
+  pendingImportRawRows = null;
+});
+
+/* Construit les lignes à insérer à partir d'une liste d'objets déjà
+   normalisés (mêmes clés, qu'elles viennent d'en-têtes détectées ou
+   d'un mapping manuel), puis les envoie à Supabase. */
+async function processImportRows(rows, delimiter){
+  setSaveIndicator('saving', 'Import en cours…');
+
+  const nomKey = findNomHeaderKey(Object.keys(rows[0] || {})) || 'nom';
   const produitsSplitRegex = delimiter === ';' ? /[,|]/ : /[;|]/;
 
   const existingKeys = new Set(prospects.map(p=>(p.nom+p.email+p.telephone).toLowerCase()));
@@ -1255,10 +1448,10 @@ async function importCsv(text){
   let skippedNoName = 0;
 
   rows.forEach(r=>{
-    const nom = r.nom || r.name || r['nom complet'] || '';
+    const nom = r.nom || r[nomKey] || r.name || '';
     if(!nom){ skippedNoName++; return; }
     const email = r.email || r.mail || '';
-    const telephone = r.telephone || r.tel || r.tél || r.phone || '';
+    const telephone = r.telephone || r.tel || r['tél'] || r.phone || '';
     const key = (nom+email+telephone).toLowerCase();
     if(existingKeys.has(key)) return; // anti-doublon simple
     existingKeys.add(key);
@@ -1268,12 +1461,16 @@ async function importCsv(text){
 
     const statutRaw = r.statut || '';
     const prioriteRaw = r.priorite || r['priorité'] || '';
+    const budgetRaw = (r.budget || '').toString().replace(',', '.');
 
     toInsert.push({
       id: crypto.randomUUID(),
       user_id: session.user.id,
       nom, prenom: r.prenom || r['prénom'] || '',
-      societe: r.societe || r['société'] || '', ville: r.ville || '',
+      societe: r.societe || r['société'] || '',
+      adresse: r.adresse || '',
+      code_postal: r['code postal'] || r.codepostal || r.cp || '',
+      ville: r.ville || '',
       telephone, email,
       siteweb: r.siteweb || r['site web'] || '',
       type_cabinet: r.typecabinet || r.type_cabinet || r['type de cabinet'] || r['type'] || '',
@@ -1283,7 +1480,7 @@ async function importCsv(text){
       dernier_contact: r.dernier_contact || r['dernier contact'] || null,
       prochaine_relance: r.prochaine_relance || r['prochaine relance'] || null,
       notes: r.notes || '',
-      budget: r.budget && !isNaN(parseFloat(r.budget.replace(',','.'))) ? parseFloat(r.budget.replace(',','.')) : null,
+      budget: budgetRaw && !isNaN(parseFloat(budgetRaw)) ? parseFloat(budgetRaw) : null,
       produits: r.produits ? r.produits.split(produitsSplitRegex).map(s=>s.trim()).filter(Boolean) : []
     });
   });
@@ -1291,7 +1488,7 @@ async function importCsv(text){
   if(!toInsert.length){
     setSaveIndicator('idle','Connecté');
     if(skippedNoName === rows.length){
-      showGlobalError("Aucune colonne « nom » n'a été reconnue dans votre fichier. Vérifiez que la première ligne contient bien un en-tête « nom » (ou renommez la colonne correspondante), puis réessayez.");
+      showGlobalError("Aucune ligne n'a de nom renseigné. Vérifiez le contenu de la colonne mappée sur « Nom »/« Nom complet ».");
     } else {
       showGlobalError('Aucun nouveau prospect à importer (tous les contacts existent déjà dans votre liste).');
     }
@@ -1302,7 +1499,7 @@ async function importCsv(text){
     const { data, error } = await supabaseClient.from('prospects').insert(toInsert).select();
     if(error){
       setSaveIndicator('error','Erreur de sauvegarde');
-      showGlobalError("Échec de l'import CSV : " + error.message + ". Astuce : si l'erreur mentionne la colonne « domaine », ajoutez-la à votre table Supabase (voir instructions).");
+      showGlobalError("Échec de l'import CSV : " + error.message + ". Astuce : si l'erreur mentionne une colonne (domaine, adresse, code_postal…), ajoutez-la à votre table Supabase (voir instructions).");
       return;
     }
     (data||[]).forEach(row=> prospects.unshift(rowToProspect(row)));
@@ -1320,11 +1517,11 @@ async function importCsv(text){
    ============================================================ */
 $('exportBtn').addEventListener('click', ()=>{
   const list = getFilteredSorted();
-  const headers = ['nom','prenom','societe','ville','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits'];
+  const headers = ['nom','prenom','societe','adresse','code_postal','ville','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits'];
   const csvRows = [headers.join(',')];
   list.forEach(p=>{
     const row = [
-      p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email,p.siteweb,p.domaine,p.typeCabinet,
+      p.nom,p.prenom,p.societe,p.adresse,p.codePostal,p.ville,p.telephone,p.email,p.siteweb,p.domaine,p.typeCabinet,
       p.statut,p.priorite,p.dernierContact||'',p.prochaineRelance||'',p.budget!=null?p.budget:'',
       (p.notes||'').replace(/[\r\n,]/g,' '),
       (p.produits||[]).join(';')
