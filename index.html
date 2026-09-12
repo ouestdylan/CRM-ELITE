@@ -166,6 +166,8 @@
   .name-cell span{color:var(--muted); font-size:12px;}
   a.tel-link{color:var(--ink); text-decoration:none; font-weight:600;}
   a.tel-link:hover{color:var(--gold);}
+  a.email-link{color:var(--muted); font-size:12px; text-decoration:none; border-bottom:1px dotted var(--muted); cursor:pointer;}
+a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   select.inline-select{
     border:1px solid var(--line); border-radius:6px; padding:5px 7px; font-size:12.5px; background:#fff;
   }
@@ -727,6 +729,33 @@ function onCallClick(id){
     quickUpdate(id, 'statut', 'Appelé');
   }
 }
+  function nextBusinessDayAt(hour, minute){
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  while(d.getDay() === 0 || d.getDay() === 6){ d.setDate(d.getDate() + 1); }
+  d.setHours(hour, minute, 0, 0);
+  return d;
+}
+
+function formatGCalDate(date){
+  return date.toISOString().replace(/[-:]|\.\d{3}/g, '');
+}
+
+function buildGoogleCalendarLink(p){
+  const start = nextBusinessDayAt(10, 0);
+  const end = new Date(start.getTime() + 30 * 60000);
+  const text = encodeURIComponent(`Rendez-vous avec ${p.prenom} ${p.nom}`.trim());
+  const details = encodeURIComponent(`Rendez-vous de prospection${p.societe ? ' — ' + p.societe : ''}.`);
+  const dates = formatGCalDate(start) + '/' + formatGCalDate(end);
+  const guests = encodeURIComponent(p.email || '');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&add=${guests}`;
+}
+
+function onEmailClick(id){
+  const p = prospects.find(x => x.id === id);
+  if(!p || !p.email) return;
+  window.open(buildGoogleCalendarLink(p), '_blank');
+}
 
 /* ============================================================
    FORMULAIRE / MODAL
@@ -900,7 +929,7 @@ function renderTable(){
     <tr>
       <td class="name-cell">
         <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
-        <span>${escapeHtml(p.email||'')}</span>
+        ${p.email ? `<a href="#" class="email-link" title="Proposer un rendez-vous sur Google Agenda" onclick="onEmailClick('${p.id}'); return false;">${escapeHtml(p.email)}</a>` : ''}
       </td>
       <td>
         <div>${escapeHtml(p.societe||'—')}</div>
