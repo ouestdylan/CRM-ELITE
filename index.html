@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Suivi Prospection — Gestionnaires de Patrimoine</title>
+<title>Suivi Prospection — CGP &amp; Solaire</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 <style>
   :root{
@@ -14,6 +14,8 @@
     --line:#e2ddd0;
     --gold:#a9823f;
     --gold-soft:#f1e6cf;
+    --solar:#c9781f;
+    --solar-soft:#fbe9d3;
     --green:#2f6b4f;
     --green-soft:#e5f0e9;
     --red:#a13d3d;
@@ -124,14 +126,35 @@
   }
   #globalError button{background:none; border:none; color:var(--red); font-weight:700; font-size:15px;}
 
+  /* ---------- SECTION TABS (CGP / Solaire) ---------- */
+  .section-header{
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
+    gap:14px; margin-bottom:18px;
+  }
+  .section-header .titles h2{font-size:21px;}
+  .section-header .titles p{color:var(--muted); font-size:13px; margin-top:4px;}
+  .tabs{display:flex; gap:8px;}
+  .tab-btn{
+    padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:#fff;
+    font-size:13px; font-weight:700; color:var(--muted);
+  }
+  .tab-btn:hover{color:var(--ink);}
+  .tab-btn.active{color:#fff; border-color:transparent;}
+  .tab-btn.active[data-domaine="Tous"]{background:#3a4a63;}
+  .tab-btn.active[data-domaine="CGP"]{background:var(--ink);}
+  .tab-btn.active[data-domaine="Solaire"]{background:var(--solar);}
+
   /* stats */
-  .stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px; margin-bottom:22px;}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:14px; margin-bottom:22px;}
   .stat-card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:16px 18px;
   }
+  .stat-card.solar-accent{border-top:3px solid var(--solar);}
+  .stat-card.cgp-accent{border-top:3px solid var(--ink);}
   .stat-card .num{font-size:26px; font-weight:700;}
   .stat-card .label{font-size:12.5px; color:var(--muted); margin-top:2px;}
+  .stat-card .subval{font-size:11px; color:var(--muted); margin-top:6px;}
 
   /* toolbar */
   .toolbar{
@@ -153,7 +176,7 @@
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     overflow-x:auto;
   }
-  table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:1150px;}
+  table{width:100%; border-collapse:collapse; font-size:13.5px; min-width:1250px;}
   thead th{
     text-align:left; padding:12px 14px; background:#fbfaf7; color:var(--muted);
     font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line);
@@ -183,6 +206,8 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   .badge-status-7{background:var(--green-soft); color:var(--green);}
   .badge-status-8{background:var(--red-soft); color:var(--red);}
   .badge-status-9{background:#eee; color:#888;}
+  .badge-domaine-cgp{background:var(--gold-soft); color:var(--gold);}
+  .badge-domaine-solaire{background:var(--solar-soft); color:var(--solar);}
   .priority-dot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px;}
   .pr-haute{background:var(--red);}
   .pr-moyenne{background:var(--amber);}
@@ -215,7 +240,18 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px; font-size:13.5px; background:#fbfaf7;
   }
   .form-grid textarea{resize:vertical; min-height:70px;}
+  .domaine-toggle{display:flex; gap:8px;}
+  .domaine-radio{flex:1;}
+  .domaine-radio input{position:absolute; opacity:0; width:0; height:0;}
+  .domaine-radio label{
+    display:block; text-align:center; border:1px solid var(--line); border-radius:8px;
+    padding:9px 10px; font-size:13px; font-weight:600; color:var(--muted); background:#fff;
+  }
+  .domaine-radio input:checked + label{color:#fff;}
+  .domaine-radio input[value="CGP"]:checked + label{background:var(--ink); border-color:var(--ink);}
+  .domaine-radio input[value="Solaire"]:checked + label{background:var(--solar); border-color:var(--solar);}
   .chip-group{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip-group.hidden{display:none;}
   .chip{
     border:1px solid var(--line); border-radius:20px; padding:7px 13px; font-size:12.5px; background:#fff;
     display:flex; align-items:center; gap:6px;
@@ -229,6 +265,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     .form-grid{grid-template-columns:1fr;}
     main{padding:16px;}
     header.topbar{padding:12px 16px;}
+    .section-header{flex-direction:column; align-items:flex-start;}
   }
 </style>
 </head>
@@ -244,7 +281,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
 <div id="loginScreen">
   <div class="login-box">
   <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
-    <p class="sub">Connexion — CGP &amp; gestionnaires de patrimoine</p>
+    <p class="sub">Connexion — CGP &amp; Solaire</p>
     <div class="login-error" id="loginError"></div>
     <form id="loginForm">
       <div class="field">
@@ -266,7 +303,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     <div class="topbar-left">
   <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
       <div>
-        <div class="sub">Leads · Trésorerie entreprise · Assurance-vie luxembourgeoise · Crédit lombard · Produit structuré · Réduction et Déduction d'impots </div>
+        <div class="sub">Leads · CGP (Trésorerie, Assurance-vie, Crédit lombard, Produits structurés, Défisc.) · Solaire</div>
       </div>
     </div>
     <div class="topbar-right">
@@ -279,6 +316,18 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     <div id="globalError">
       <span id="globalErrorText"></span>
       <button id="globalErrorClose">×</button>
+    </div>
+
+    <div class="section-header">
+      <div class="titles">
+        <h2 id="sectionTitle">Tous les prospects</h2>
+        <p id="sectionSubtitle">Vue combinée des deux activités.</p>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn" data-domaine="Tous" onclick="setDomaineTab('Tous')">Tous</button>
+        <button class="tab-btn" data-domaine="CGP" onclick="setDomaineTab('CGP')">CGP</button>
+        <button class="tab-btn" data-domaine="Solaire" onclick="setDomaineTab('Solaire')">Solaire</button>
+      </div>
     </div>
 
     <section class="stats" id="statsRow"></section>
@@ -296,12 +345,6 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
       </select>
       <select id="filterProduit">
         <option value="">Tous produits</option>
-        <option value="Leads">Leads</option>
-        <option value="Trésorerie entreprise">Trésorerie entreprise</option>
-        <option value="Assurance-vie luxembourgeoise">Assurance-vie luxembourgeoise</option>
-        <option value="Crédit lombard">Crédit lombard</option>
-        <option value="Produit structuré">Produit structuré</option>
-        <option value="Réduction et Déduction impôts">Réduction et Déduction d'impôts</option>
       </select>
       <div class="toolbar-spacer"></div>
       <button class="btn-sm" id="importBtn">Importer CSV</button>
@@ -317,6 +360,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
             <th data-sort="nom">Contact</th>
             <th data-sort="societe">Société / Ville</th>
             <th>Téléphone</th>
+            <th data-sort="domaine">Domaine</th>
             <th data-sort="type_cabinet">Type</th>
             <th data-sort="statut">Statut</th>
             <th data-sort="priorite">Priorité</th>
@@ -341,6 +385,19 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     <div class="form-error" id="formError"></div>
     <form id="prospectForm">
       <div class="form-grid">
+        <div class="full">
+          <label>Domaine</label>
+          <div class="domaine-toggle">
+            <div class="domaine-radio">
+              <input type="radio" name="f_domaine" id="f_domaine_cgp" value="CGP" checked>
+              <label for="f_domaine_cgp">CGP</label>
+            </div>
+            <div class="domaine-radio">
+              <input type="radio" name="f_domaine" id="f_domaine_solaire" value="Solaire">
+              <label for="f_domaine_solaire">Solaire</label>
+            </div>
+          </div>
+        </div>
         <div><label>Prénom</label><input type="text" id="f_prenom"></div>
         <div><label>Nom</label><input type="text" id="f_nom" required></div>
         <div><label>Société</label><input type="text" id="f_societe"></div>
@@ -350,15 +407,8 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <div><label>Site web</label><input type="text" id="f_siteweb"></div>
 <div><label>Budget envisagé (€)</label><input type="number" id="f_budget" min="0" step="500" placeholder="Ex: 50000"></div>
         <div>
-          <label>Type de cabinet</label>
-          <select id="f_typeCabinet">
-            <option value="CGPI">CGPI</option>
-            <option value="Banque privée">Banque privée</option>
-            <option value="Family office">Family office</option>
-            <option value="Courtier">Courtier</option>
-            <option value="Expert-comptable">Expert-comptable</option>
-            <option value="Autre">Autre</option>
-          </select>
+          <label id="typeCabinetLabel">Type de cabinet</label>
+          <select id="f_typeCabinet"></select>
         </div>
         <div>
           <label>Statut</label>
@@ -376,13 +426,21 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <div><label>Prochaine relance</label><input type="date" id="f_prochaineRelance"></div>
         <div class="full">
           <label>Produits</label>
-          <div class="chip-group">
+          <div class="chip-group" id="chipGroupCGP">
             <label class="chip"><input type="checkbox" value="Leads" class="produit-check"> Leads</label>
             <label class="chip"><input type="checkbox" value="Trésorerie entreprise" class="produit-check"> Trésorerie entreprise</label>
             <label class="chip"><input type="checkbox" value="Assurance-vie luxembourgeoise" class="produit-check"> Assurance-vie luxembourgeoise</label>
             <label class="chip"><input type="checkbox" value="Crédit lombard" class="produit-check"> Crédit lombard</label>
             <label class="chip"><input type="checkbox" value="Produits structurés" class="produit-check"> Produits structurés</label>
-            <label class="chip"><input type="checkbox" value="Réduction et Déduction impôts" class="produit-check">Réduction et Déduction impôts</label>
+            <label class="chip"><input type="checkbox" value="Réduction et Déduction impôts" class="produit-check"> Réduction et Déduction impôts</label>
+          </div>
+          <div class="chip-group hidden" id="chipGroupSolaire">
+            <label class="chip"><input type="checkbox" value="Leads Photovoltaïque résidentiel" class="produit-check"> Leads Photovoltaïque résidentiel</label>
+            <label class="chip"><input type="checkbox" value="Autoconsommation solaire" class="produit-check"> Autoconsommation solaire</label>
+            <label class="chip"><input type="checkbox" value="Photovoltaïque professionnel / agricole" class="produit-check"> Photovoltaïque professionnel / agricole</label>
+            <label class="chip"><input type="checkbox" value="Ombrières solaires (parking)" class="produit-check"> Ombrières solaires (parking)</label>
+            <label class="chip"><input type="checkbox" value="Bornes de recharge (IRVE)" class="produit-check"> Bornes de recharge (IRVE)</label>
+            <label class="chip"><input type="checkbox" value="Rénovation énergétique globale" class="produit-check"> Rénovation énergétique globale</label>
           </div>
         </div>
         <div class="full">
@@ -400,7 +458,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
 
 <script>
 /* ============================================================
-   CONFIGURATION SUPABASE — renseigne tes valeurs ici
+   CONFIGURATION SUPABASE
    ============================================================ */
 const SUPABASE_URL = 'https://gjgoiyubnisuaojgjsev.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VdUbxcgsZ3y9Wms3B0RS1Q_dXl_77Ou';
@@ -420,7 +478,24 @@ const STATUT_CLASS = {
   'Intéressé':'badge-status-4','RDV pris':'badge-status-5','En négociation':'badge-status-6',
   'Client':'badge-status-7','Pas intéressé':'badge-status-8','Injoignable':'badge-status-9'
 };
-const PRODUITS = ['Leads','Trésorerie entreprise','Assurance-vie luxembourgeoise','Crédit lombard','Réduction et Déduction impôts', 'Produit structuré'];
+
+const DOMAINES = ['CGP','Solaire'];
+const DOMAINE_LABELS = { CGP:'Gestion de patrimoine (CGP)', Solaire:'Solaire' };
+const DOMAINE_SUBTITLES = {
+  Tous:'Vue combinée des deux activités.',
+  CGP:'Prospects CGPI, banques privées, family offices, courtiers, experts-comptables.',
+  Solaire:'Prospects photovoltaïque résidentiel, professionnel et agricole.'
+};
+
+const PRODUITS_CGP = ['Leads','Trésorerie entreprise','Assurance-vie luxembourgeoise','Crédit lombard','Produits structurés','Réduction et Déduction impôts'];
+const PRODUITS_SOLAIRE = ['Leads Photovoltaïque résidentiel','Autoconsommation solaire','Photovoltaïque professionnel / agricole','Ombrières solaires (parking)','Bornes de recharge (IRVE)','Rénovation énergétique globale'];
+const PRODUITS_BY_DOMAINE = { CGP: PRODUITS_CGP, Solaire: PRODUITS_SOLAIRE };
+// Conservé pour compatibilité (ex-usage global)
+const PRODUITS = PRODUITS_CGP.concat(PRODUITS_SOLAIRE);
+
+const TYPE_OPTIONS_CGP = ['CGPI','Banque privée','Family office','Courtier','Expert-comptable','Autre'];
+const TYPE_OPTIONS_SOLAIRE = ['Installateur RGE','Revendeur / Franchise solaire','Courtier en énergie','Bureau d\'études','Agriculteur / Propriétaire foncier','Autre'];
+const TYPE_OPTIONS_BY_DOMAINE = { CGP: TYPE_OPTIONS_CGP, Solaire: TYPE_OPTIONS_SOLAIRE };
 
 /* ============================================================
    ÉTAT GLOBAL
@@ -431,6 +506,7 @@ let currentEditId = null;
 let realtimeChannel = null;
 let sortState = { field: 'created_at', dir: 'desc' };
 let notesDebounceTimers = {};
+let currentDomaineTab = 'Tous';  // 'Tous' | 'CGP' | 'Solaire'
 
 /* ============================================================
    HELPERS UI
@@ -535,6 +611,7 @@ async function checkSessionOnLoad(){
 async function initAppAfterLogin(){
   showLoading('Chargement de vos prospects…');
   populateStatutSelects();
+  restoreDomaineTab();
   const ok = await loadProspects();
   if(ok){
     showApp();
@@ -561,6 +638,7 @@ function rowToProspect(row){
     email: row.email || '',
     siteweb: row.siteweb || '',
     typeCabinet: row.type_cabinet || '',
+    domaine: (row.domaine === 'Solaire') ? 'Solaire' : 'CGP',
     statut: row.statut || 'À appeler',
     priorite: row.priorite || 'Moyenne',
     dernierContact: row.dernier_contact || '',
@@ -577,7 +655,8 @@ function prospectToRow(p, userId){
   return {
     nom: p.nom, prenom: p.prenom, societe: p.societe, ville: p.ville,
     telephone: p.telephone, email: p.email, siteweb: p.siteweb,
-    type_cabinet: p.typeCabinet, statut: p.statut, priorite: p.priorite,
+    type_cabinet: p.typeCabinet, domaine: p.domaine === 'Solaire' ? 'Solaire' : 'CGP',
+    statut: p.statut, priorite: p.priorite,
     dernier_contact: p.dernierContact || null, prochaine_relance: p.prochaineRelance || null,
     notes: p.notes, produits: p.produits || [], budget: (p.budget !== undefined && p.budget !== null && p.budget !== '') ? p.budget : null,
     ...(userId ? { user_id: userId } : {})
@@ -635,6 +714,36 @@ function handleRealtimeEvent(payload){
     prospects = prospects.filter(p=>p.id !== payload.old.id);
   }
   renderAll();
+}
+
+/* ============================================================
+   ONGLETS DOMAINE (CGP / Solaire / Tous)
+   ============================================================ */
+function restoreDomaineTab(){
+  const saved = loadUiPref('domaineTab', 'Tous');
+  currentDomaineTab = DOMAINES.includes(saved) ? saved : 'Tous';
+  updateSectionHeader();
+}
+
+function setDomaineTab(d){
+  currentDomaineTab = d;
+  saveUiPref('domaineTab', d);
+  updateSectionHeader();
+  populateProduitFilter();
+  renderAll();
+}
+
+function updateSectionHeader(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.domaine === currentDomaineTab);
+  });
+  $('sectionTitle').textContent = currentDomaineTab === 'Tous' ? 'Tous les prospects' : DOMAINE_LABELS[currentDomaineTab];
+  $('sectionSubtitle').textContent = DOMAINE_SUBTITLES[currentDomaineTab];
+}
+
+function getDomaineScopedList(domaine){
+  if(domaine === 'Tous') return prospects;
+  return prospects.filter(p => p.domaine === domaine);
 }
 
 /* ============================================================
@@ -769,6 +878,37 @@ function populateStatutSelects(){
   $('f_statut').innerHTML = STATUTS.map(s=>`<option value="${s}">${s}</option>`).join('');
 }
 
+function populateProduitFilter(){
+  const sel = $('filterProduit');
+  const current = sel.value;
+  let html = '<option value="">Tous produits</option>';
+  if(currentDomaineTab === 'CGP'){
+    html += PRODUITS_CGP.map(p=>`<option value="${p}">${p}</option>`).join('');
+  } else if(currentDomaineTab === 'Solaire'){
+    html += PRODUITS_SOLAIRE.map(p=>`<option value="${p}">${p}</option>`).join('');
+  } else {
+    html += '<optgroup label="CGP">' + PRODUITS_CGP.map(p=>`<option value="${p}">${p}</option>`).join('') + '</optgroup>';
+    html += '<optgroup label="Solaire">' + PRODUITS_SOLAIRE.map(p=>`<option value="${p}">${p}</option>`).join('') + '</optgroup>';
+  }
+  sel.innerHTML = html;
+  if([...sel.options].some(o=>o.value===current)) sel.value = current; else sel.value = '';
+}
+
+function updateDomaineFields(){
+  const d = document.querySelector('input[name="f_domaine"]:checked').value;
+  $('chipGroupCGP').classList.toggle('hidden', d !== 'CGP');
+  $('chipGroupSolaire').classList.toggle('hidden', d !== 'Solaire');
+  const opts = TYPE_OPTIONS_BY_DOMAINE[d] || TYPE_OPTIONS_CGP;
+  $('f_typeCabinet').innerHTML = opts.map(o=>`<option value="${o}">${o}</option>`).join('');
+  $('typeCabinetLabel').textContent = d === 'Solaire' ? "Type de structure" : "Type de cabinet";
+}
+document.querySelectorAll('input[name="f_domaine"]').forEach(r=>{
+  r.addEventListener('change', ()=>{
+    document.querySelectorAll('.produit-check').forEach(c=>c.checked=false);
+    updateDomaineFields();
+  });
+});
+
 function showFormError(msg){
   const el = $('formError');
   el.textContent = msg;
@@ -781,6 +921,11 @@ function openProspectModal(id){
   hideFormError();
   const p = id ? prospects.find(x=>x.id===id) : null;
   $('modalTitle').textContent = id ? 'Modifier le prospect' : 'Nouveau prospect';
+
+  const defaultDomaine = p ? p.domaine : (currentDomaineTab !== 'Tous' ? currentDomaineTab : 'CGP');
+  document.querySelector(`input[name="f_domaine"][value="${defaultDomaine}"]`).checked = true;
+  updateDomaineFields();
+
   $('f_prenom').value = p ? p.prenom : '';
   $('f_nom').value = p ? p.nom : '';
   $('f_societe').value = p ? p.societe : '';
@@ -789,7 +934,7 @@ function openProspectModal(id){
   $('f_email').value = p ? p.email : '';
   $('f_siteweb').value = p ? p.siteweb : '';
 $('f_budget').value = (p && p.budget != null) ? p.budget : '';
-  $('f_typeCabinet').value = p ? p.typeCabinet : 'CGPI';
+  $('f_typeCabinet').value = p ? p.typeCabinet : '';
   $('f_statut').value = p ? p.statut : 'À appeler';
   $('f_priorite').value = p ? p.priorite : 'Moyenne';
   $('f_dernierContact').value = p ? (p.dernierContact || '') : '';
@@ -818,6 +963,7 @@ $('prospectForm').addEventListener('submit', async (e)=>{
     .filter(c=>c.checked).map(c=>c.value);
 
   const payload = {
+    domaine: document.querySelector('input[name="f_domaine"]:checked').value,
     prenom: $('f_prenom').value.trim(),
     nom,
     societe: $('f_societe').value.trim(),
@@ -860,27 +1006,35 @@ budget: $('f_budget').value !== '' ? parseFloat($('f_budget').value) : null,
   function formatEuro(n){
   return new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(n || 0);
 }
-function renderStats(){
-  const total = prospects.length;
-  const aRelancer = prospects.filter(p=>p.statut==='À relancer').length;
-  const rdvPris = prospects.filter(p=>p.statut==='RDV pris').length;
-  const clientsList = prospects.filter(p=>p.statut==='Client');
-  const clients = clientsList.length;
-  const today = new Date().toISOString().slice(0,10);
-  const relancesToday = prospects.filter(p=>p.prochaineRelance && p.prochaineRelance <= today && p.statut!=='Client' && p.statut!=='Pas intéressé').length;
 
-  const budgetsClients = clientsList.map(p=>p.budget).filter(b=>b!=null && !isNaN(b));
-  const caGenere = budgetsClients.reduce((sum,b)=>sum+b, 0);
-  const panierMoyen = budgetsClients.length ? caGenere / budgetsClients.length : 0;
+function computeDomaineCA(domaine){
+  const clientsList = prospects.filter(p=>p.statut==='Client' && p.domaine===domaine);
+  const budgets = clientsList.map(p=>p.budget).filter(b=>b!=null && !isNaN(b));
+  const ca = budgets.reduce((sum,b)=>sum+b, 0);
+  const panierMoyen = budgets.length ? ca / budgets.length : 0;
+  return { ca, panierMoyen, nbClients: clientsList.length };
+}
+
+function renderStats(){
+  const scoped = getDomaineScopedList(currentDomaineTab);
+  const total = scoped.length;
+  const aRelancer = scoped.filter(p=>p.statut==='À relancer').length;
+  const rdvPris = scoped.filter(p=>p.statut==='RDV pris').length;
+  const clients = scoped.filter(p=>p.statut==='Client').length;
+  const today = new Date().toISOString().slice(0,10);
+  const relancesToday = scoped.filter(p=>p.prochaineRelance && p.prochaineRelance <= today && p.statut!=='Client' && p.statut!=='Pas intéressé').length;
+
+  const cgp = computeDomaineCA('CGP');
+  const solaire = computeDomaineCA('Solaire');
 
   $('statsRow').innerHTML = `
-    <div class="stat-card"><div class="num">${total}</div><div class="label">Prospects au total</div></div>
+    <div class="stat-card"><div class="num">${total}</div><div class="label">Prospects (${currentDomaineTab})</div></div>
     <div class="stat-card"><div class="num">${aRelancer}</div><div class="label">À relancer</div></div>
     <div class="stat-card"><div class="num">${rdvPris}</div><div class="label">RDV pris</div></div>
     <div class="stat-card"><div class="num">${clients}</div><div class="label">Clients</div></div>
     <div class="stat-card"><div class="num">${relancesToday}</div><div class="label">Relances en retard / dues</div></div>
-    <div class="stat-card"><div class="num">${formatEuro(panierMoyen)}</div><div class="label">Panier moyen (clients)</div></div>
-    <div class="stat-card"><div class="num">${formatEuro(caGenere)}</div><div class="label">CA généré (temps réel)</div></div>
+    <div class="stat-card cgp-accent"><div class="num">${formatEuro(cgp.ca)}</div><div class="label">CA généré — CGP</div><div class="subval">${cgp.nbClients} client(s) · panier moyen ${formatEuro(cgp.panierMoyen)}</div></div>
+    <div class="stat-card solar-accent"><div class="num">${formatEuro(solaire.ca)}</div><div class="label">CA généré — Solaire</div><div class="subval">${solaire.nbClients} client(s) · panier moyen ${formatEuro(solaire.panierMoyen)}</div></div>
   `;
 }
 
@@ -894,6 +1048,7 @@ function getFilteredSorted(){
   const fProduit = $('filterProduit').value;
 
   let list = prospects.filter(p=>{
+    if(currentDomaineTab !== 'Tous' && p.domaine !== currentDomaineTab) return false;
     if(fStatut && p.statut !== fStatut) return false;
     if(fPriorite && p.priorite !== fPriorite) return false;
     if(fProduit && !(p.produits||[]).includes(fProduit)) return false;
@@ -916,7 +1071,7 @@ function getFilteredSorted(){
   return list;
 }
 function toCamel(field){
-  const map = { nom:'nom', societe:'societe', type_cabinet:'typeCabinet', statut:'statut', priorite:'priorite', prochaine_relance:'prochaineRelance' };
+  const map = { nom:'nom', societe:'societe', type_cabinet:'typeCabinet', domaine:'domaine', statut:'statut', priorite:'priorite', prochaine_relance:'prochaineRelance' };
   return map[field] || field;
 }
 
@@ -940,7 +1095,7 @@ function renderTable(){
 
   body.innerHTML = list.map(p=>{
     const produitsHtml = (p.produits||[]).map(pr=>`<span class="produit-tag">${escapeHtml(pr)}</span>`).join('');
-    const prClass = p.priorite==='Haute' ? 'pr-haute' : p.priorite==='Basse' ? 'pr-basse' : 'pr-moyenne';
+    const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
     return `
     <tr>
       <td class="name-cell">
@@ -952,6 +1107,7 @@ function renderTable(){
         <span style="color:var(--muted); font-size:12px;">${escapeHtml(p.ville||'')}</span>
       </td>
       <td>${p.telephone ? `<a class="tel-link" href="tel:${escapeHtml(p.telephone)}" onclick="onCallClick('${p.id}')">${escapeHtml(p.telephone)}</a>` : '—'}</td>
+      <td><span class="badge ${domaineBadgeClass}">${p.domaine}</span></td>
       <td>${escapeHtml(p.typeCabinet||'—')}</td>
       <td>
         <select class="inline-select" onchange="quickUpdate('${p.id}','statut',this.value)">
@@ -1005,14 +1161,19 @@ function renderAll(){
   if(filters){
     $('filterStatut').value = filters.statut || '';
     $('filterPriorite').value = filters.priorite || '';
-    $('filterProduit').value = filters.produit || '';
   }
   const sort = loadUiPref('sort', null);
   if(sort) sortState = sort;
+  populateProduitFilter();
+  const filters2 = loadUiPref('filters', null);
+  if(filters2 && filters2.produit){
+    if([...$('filterProduit').options].some(o=>o.value===filters2.produit)) $('filterProduit').value = filters2.produit;
+  }
 })();
 
 /* ============================================================
-   IMPORT CSV
+   IMPORT CSV — parseur robuste (virgule OU point-virgule, guillemets,
+   accents dans les en-têtes, BOM Excel/Google Sheets)
    ============================================================ */
 $('importBtn').addEventListener('click', ()=>$('csvFileInput').click());
 $('csvFileInput').addEventListener('change', async (e)=>{
@@ -1023,57 +1184,117 @@ $('csvFileInput').addEventListener('change', async (e)=>{
   e.target.value = '';
 });
 
+function stripAccents(str){
+  return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function detectDelimiter(text){
+  const firstLine = text.split(/\r?\n/)[0] || '';
+  const commas = (firstLine.match(/,/g)||[]).length;
+  const semis = (firstLine.match(/;/g)||[]).length;
+  const tabs = (firstLine.match(/\t/g)||[]).length;
+  if(tabs > commas && tabs > semis) return '\t';
+  return semis > commas ? ';' : ',';
+}
+
+/* Parseur CSV "à la main" : gère les champs entre guillemets (avec
+   virgules/points-virgules/retours à la ligne à l'intérieur), le
+   BOM UTF-8 de Google Sheets/Excel, et détecte automatiquement le
+   séparateur (virgule ou point-virgule selon les paramètres régionaux). */
 function parseCsv(text){
-  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
-  if(!lines.length) return [];
-  const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
-  return lines.slice(1).map(line=>{
-    const cols = line.split(',');
+  text = String(text||'').replace(/^\uFEFF/, ''); // retire le BOM éventuel
+  if(!text.trim()) return { rows: [], delimiter: ',' };
+
+  const delimiter = detectDelimiter(text);
+  const rawRows = [];
+  let row = [], field = '', inQuotes = false;
+
+  for(let i=0; i<text.length; i++){
+    const c = text[i], next = text[i+1];
+    if(inQuotes){
+      if(c === '"' && next === '"'){ field += '"'; i++; }
+      else if(c === '"'){ inQuotes = false; }
+      else field += c;
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === delimiter){ row.push(field); field = ''; }
+      else if(c === '\r'){ /* ignoré, géré par \n */ }
+      else if(c === '\n'){ row.push(field); rawRows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rawRows.push(row); }
+
+  const nonEmptyRows = rawRows.filter(r => r.some(c => String(c).trim().length));
+  if(!nonEmptyRows.length) return { rows: [], delimiter };
+
+  const headers = nonEmptyRows[0].map(h => stripAccents(h).trim().toLowerCase());
+  const rows = nonEmptyRows.slice(1).map(cols=>{
     const obj = {};
-    headers.forEach((h,i)=> obj[h] = (cols[i]||'').trim());
+    headers.forEach((h,i)=> obj[h] = (cols[i]!=null ? String(cols[i]) : '').trim());
     return obj;
   });
+  return { rows, delimiter };
 }
 
 async function importCsv(text){
   setSaveIndicator('saving', 'Import en cours…');
-  const rows = parseCsv(text);
+  const { rows, delimiter } = parseCsv(text);
   if(!rows.length){
     setSaveIndicator('idle','Connecté');
-    showGlobalError('Le fichier CSV est vide ou illisible.');
+    showGlobalError('Le fichier CSV est vide, illisible, ou ne contient pas de ligne d\'en-tête reconnaissable.');
     return;
   }
 
+  // Séparateur utilisé pour la sous-liste "produits" à l'intérieur d'une cellule :
+  // on prend l'inverse du séparateur de colonnes détecté pour éviter tout conflit.
+  const produitsSplitRegex = delimiter === ';' ? /[,|]/ : /[;|]/;
+
   const existingKeys = new Set(prospects.map(p=>(p.nom+p.email+p.telephone).toLowerCase()));
   const toInsert = [];
+  let skippedNoName = 0;
+
   rows.forEach(r=>{
-    const nom = r.nom || r.name || '';
-    if(!nom) return;
-    const email = r.email || '';
-    const telephone = r.telephone || r.tel || '';
+    const nom = r.nom || r.name || r['nom complet'] || '';
+    if(!nom){ skippedNoName++; return; }
+    const email = r.email || r.mail || '';
+    const telephone = r.telephone || r.tel || r.tél || r.phone || '';
     const key = (nom+email+telephone).toLowerCase();
     if(existingKeys.has(key)) return; // anti-doublon simple
     existingKeys.add(key);
+
+    const domaineRaw = stripAccents(r.domaine || '').toLowerCase();
+    const domaine = domaineRaw.includes('solaire') ? 'Solaire' : 'CGP';
+
+    const statutRaw = r.statut || '';
+    const prioriteRaw = r.priorite || r['priorité'] || '';
+
     toInsert.push({
       id: crypto.randomUUID(),
       user_id: session.user.id,
-      nom, prenom: r.prenom || '',
-      societe: r.societe || '', ville: r.ville || '',
+      nom, prenom: r.prenom || r['prénom'] || '',
+      societe: r.societe || r['société'] || '', ville: r.ville || '',
       telephone, email,
-      siteweb: r.siteweb || '',
-      type_cabinet: r.typecabinet || r.type_cabinet || '',
-      statut: STATUTS.includes(r.statut) ? r.statut : 'À appeler',
-      priorite: ['Haute','Moyenne','Basse'].includes(r.priorite) ? r.priorite : 'Moyenne',
-      dernier_contact: r.dernier_contact || r.dernierco || null,
-      prochaine_relance: r.prochaine_relance || null,
+      siteweb: r.siteweb || r['site web'] || '',
+      type_cabinet: r.typecabinet || r.type_cabinet || r['type de cabinet'] || r['type'] || '',
+      domaine,
+      statut: STATUTS.includes(statutRaw) ? statutRaw : 'À appeler',
+      priorite: ['Haute','Moyenne','Basse'].includes(prioriteRaw) ? prioriteRaw : 'Moyenne',
+      dernier_contact: r.dernier_contact || r['dernier contact'] || null,
+      prochaine_relance: r.prochaine_relance || r['prochaine relance'] || null,
       notes: r.notes || '',
-      produits: r.produits ? r.produits.split(';').map(s=>s.trim()).filter(Boolean) : []
+      budget: r.budget && !isNaN(parseFloat(r.budget.replace(',','.'))) ? parseFloat(r.budget.replace(',','.')) : null,
+      produits: r.produits ? r.produits.split(produitsSplitRegex).map(s=>s.trim()).filter(Boolean) : []
     });
   });
 
   if(!toInsert.length){
     setSaveIndicator('idle','Connecté');
-    showGlobalError('Aucun nouveau prospect à importer (doublons ou fichier vide).');
+    if(skippedNoName === rows.length){
+      showGlobalError("Aucune colonne « nom » n'a été reconnue dans votre fichier. Vérifiez que la première ligne contient bien un en-tête « nom » (ou renommez la colonne correspondante), puis réessayez.");
+    } else {
+      showGlobalError('Aucun nouveau prospect à importer (tous les contacts existent déjà dans votre liste).');
+    }
     return;
   }
 
@@ -1081,7 +1302,7 @@ async function importCsv(text){
     const { data, error } = await supabaseClient.from('prospects').insert(toInsert).select();
     if(error){
       setSaveIndicator('error','Erreur de sauvegarde');
-      showGlobalError("Échec de l'import CSV : " + error.message);
+      showGlobalError("Échec de l'import CSV : " + error.message + ". Astuce : si l'erreur mentionne la colonne « domaine », ajoutez-la à votre table Supabase (voir instructions).");
       return;
     }
     (data||[]).forEach(row=> prospects.unshift(rowToProspect(row)));
@@ -1099,12 +1320,12 @@ async function importCsv(text){
    ============================================================ */
 $('exportBtn').addEventListener('click', ()=>{
   const list = getFilteredSorted();
-  const headers = ['nom','prenom','societe','ville','telephone','email','siteweb','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','notes','produits'];
+  const headers = ['nom','prenom','societe','ville','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits'];
   const csvRows = [headers.join(',')];
   list.forEach(p=>{
     const row = [
-      p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email,p.siteweb,p.typeCabinet,
-      p.statut,p.priorite,p.dernierContact||'',p.prochaineRelance||'',
+      p.nom,p.prenom,p.societe,p.ville,p.telephone,p.email,p.siteweb,p.domaine,p.typeCabinet,
+      p.statut,p.priorite,p.dernierContact||'',p.prochaineRelance||'',p.budget!=null?p.budget:'',
       (p.notes||'').replace(/[\r\n,]/g,' '),
       (p.produits||[]).join(';')
     ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`);
