@@ -125,7 +125,7 @@
   #globalError button{background:none; border:none; color:var(--red); font-weight:700; font-size:15px;}
 
   /* stats */
-  .stats{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px;}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px; margin-bottom:22px;}
   .stat-card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:16px 18px;
@@ -321,7 +321,8 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
             <th data-sort="statut">Statut</th>
             <th data-sort="priorite">Priorité</th>
             <th data-sort="prochaine_relance">Prochaine relance</th>
-            <th>Produits</th>
+            <th data-sort="budget">Budget</th>
+<th>Produits</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -347,6 +348,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
         <div><label>Téléphone</label><input type="text" id="f_telephone"></div>
         <div><label>Email</label><input type="email" id="f_email"></div>
         <div><label>Site web</label><input type="text" id="f_siteweb"></div>
+<div><label>Budget envisagé (€)</label><input type="number" id="f_budget" min="0" step="500" placeholder="Ex: 50000"></div>
         <div>
           <label>Type de cabinet</label>
           <select id="f_typeCabinet">
@@ -565,6 +567,7 @@ function rowToProspect(row){
     prochaineRelance: row.prochaine_relance || '',
     notes: row.notes || '',
     produits: row.produits || [],
+budget: row.budget != null ? Number(row.budget) : null,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -576,7 +579,7 @@ function prospectToRow(p, userId){
     telephone: p.telephone, email: p.email, siteweb: p.siteweb,
     type_cabinet: p.typeCabinet, statut: p.statut, priorite: p.priorite,
     dernier_contact: p.dernierContact || null, prochaine_relance: p.prochaineRelance || null,
-    notes: p.notes, produits: p.produits || [],
+    notes: p.notes, produits: p.produits || [], budget: (p.budget !== undefined && p.budget !== null && p.budget !== '') ? p.budget : null,
     ...(userId ? { user_id: userId } : {})
   };
 }
@@ -785,6 +788,7 @@ function openProspectModal(id){
   $('f_telephone').value = p ? p.telephone : '';
   $('f_email').value = p ? p.email : '';
   $('f_siteweb').value = p ? p.siteweb : '';
+$('f_budget').value = (p && p.budget != null) ? p.budget : '';
   $('f_typeCabinet').value = p ? p.typeCabinet : 'CGPI';
   $('f_statut').value = p ? p.statut : 'À appeler';
   $('f_priorite').value = p ? p.priorite : 'Moyenne';
@@ -821,6 +825,7 @@ $('prospectForm').addEventListener('submit', async (e)=>{
     telephone: $('f_telephone').value.trim(),
     email: $('f_email').value.trim(),
     siteweb: $('f_siteweb').value.trim(),
+budget: $('f_budget').value !== '' ? parseFloat($('f_budget').value) : null,
     typeCabinet: $('f_typeCabinet').value,
     statut: $('f_statut').value,
     priorite: $('f_priorite').value,
@@ -851,13 +856,22 @@ $('prospectForm').addEventListener('submit', async (e)=>{
 /* ============================================================
    RENDU : STATS
    ============================================================ */
+
+  function formatEuro(n){
+  return new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(n || 0);
+}
 function renderStats(){
   const total = prospects.length;
   const aRelancer = prospects.filter(p=>p.statut==='À relancer').length;
   const rdvPris = prospects.filter(p=>p.statut==='RDV pris').length;
-  const clients = prospects.filter(p=>p.statut==='Client').length;
+  const clientsList = prospects.filter(p=>p.statut==='Client');
+  const clients = clientsList.length;
   const today = new Date().toISOString().slice(0,10);
   const relancesToday = prospects.filter(p=>p.prochaineRelance && p.prochaineRelance <= today && p.statut!=='Client' && p.statut!=='Pas intéressé').length;
+
+  const budgetsClients = clientsList.map(p=>p.budget).filter(b=>b!=null && !isNaN(b));
+  const caGenere = budgetsClients.reduce((sum,b)=>sum+b, 0);
+  const panierMoyen = budgetsClients.length ? caGenere / budgetsClients.length : 0;
 
   $('statsRow').innerHTML = `
     <div class="stat-card"><div class="num">${total}</div><div class="label">Prospects au total</div></div>
@@ -865,6 +879,8 @@ function renderStats(){
     <div class="stat-card"><div class="num">${rdvPris}</div><div class="label">RDV pris</div></div>
     <div class="stat-card"><div class="num">${clients}</div><div class="label">Clients</div></div>
     <div class="stat-card"><div class="num">${relancesToday}</div><div class="label">Relances en retard / dues</div></div>
+    <div class="stat-card"><div class="num">${formatEuro(panierMoyen)}</div><div class="label">Panier moyen (clients)</div></div>
+    <div class="stat-card"><div class="num">${formatEuro(caGenere)}</div><div class="label">CA généré (temps réel)</div></div>
   `;
 }
 
@@ -952,7 +968,8 @@ function renderTable(){
       <td>
         <input type="date" class="inline-select" value="${p.prochaineRelance||''}" onchange="quickUpdate('${p.id}','prochaineRelance',this.value)">
       </td>
-      <td><div class="produit-tags">${produitsHtml || '<span style="color:var(--muted); font-size:12px;">—</span>'}</div></td>
+      <td>${p.budget != null ? formatEuro(p.budget) : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
+<td><div class="produit-tags">${produitsHtml || '<span style="color:var(--muted); font-size:12px;">—</span>'}</div></td>
       <td>
         <div class="row-actions">
           <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
