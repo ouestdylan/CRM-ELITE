@@ -294,7 +294,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     display:block; text-align:center; border:1px solid var(--line); border-radius:8px;
     padding:9px 10px; font-size:13px; font-weight:600; color:var(--muted); background:#fff;
   }
-  .domaine-radio input:checked + label{color:#fff;}
+  .domaine-radio input:checked + label{color:#fff; background:var(--ink); border-color:var(--ink);}
   .domaine-radio input[value="CGP"]:checked + label{background:var(--ink); border-color:var(--ink);}
   .domaine-radio input[value="Solaire"]:checked + label{background:var(--solar); border-color:var(--solar);}
   .chip-group{display:flex; flex-wrap:wrap; gap:8px;}
@@ -306,6 +306,22 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   .chip input{width:auto; margin:0;}
   .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:22px;}
   .form-error{background:var(--red-soft); color:var(--red); padding:9px 12px; border-radius:7px; font-size:13px; margin-bottom:14px; display:none;}
+
+  /* ---------- Pop-up d'attribution des RDV non rattachés ---------- */
+  .pending-claims-badge{
+    position:fixed; bottom:24px; right:24px; z-index:150;
+    background:var(--red); color:#fff; border:none; border-radius:30px;
+    padding:13px 20px; font-size:13.5px; font-weight:700; box-shadow:0 10px 25px rgba(0,0,0,.28);
+    display:flex; align-items:center; gap:6px; cursor:pointer;
+  }
+  .pending-claims-badge:hover{opacity:.92;}
+  .pending-claim-item{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:14px 0; border-bottom:1px solid #efece3;
+  }
+  .pending-claim-item:last-child{border-bottom:none;}
+  .pending-claim-item .pc-date{color:var(--muted); font-size:12.5px; text-transform:capitalize; margin-top:2px;}
+  .pending-claim-item .pc-meta{color:var(--muted); font-size:12.5px; margin-top:2px;}
 
   @media (max-width:900px){
     .stats{grid-template-columns:repeat(2,1fr);}
@@ -547,16 +563,12 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   </div>
 </div>
 
-<!-- MODAL LIEN DE CAMPAGNE (choix de l'associé destinataire) -->
+<!-- MODAL LIEN DE CAMPAGNE -->
 <div class="modal-overlay" id="campaignLinkModalOverlay">
   <div class="modal" style="max-width:460px;">
     <h2>Lien de campagne générique</h2>
-    <p class="modal-sub">Ce lien ne sera pas personnalisé pour un prospect précis : la personne qui clique renseigne elle-même ses coordonnées, puis le rendez-vous est enregistré dans le CRM que vous choisissez ci-dessous.</p>
+    <p class="modal-sub">Ce lien n'est pas personnalisé pour un prospect précis : la personne qui clique renseigne elle-même ses coordonnées et choisit son créneau. Le rendez-vous apparaît alors en attente d'attribution dans les 3 CRM — le premier d'entre vous qui clique sur "Je le prends" le récupère.</p>
     <div class="form-grid">
-      <div class="full">
-        <label>Va dans le CRM de</label>
-        <div class="domaine-toggle" id="campaignAssocieToggle"></div>
-      </div>
       <div class="full">
         <label>Domaine</label>
         <div class="domaine-toggle">
@@ -593,6 +605,22 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost" id="cancelReassignBtn">Annuler</button>
       <button type="button" class="btn btn-primary" id="confirmReassignBtn" style="width:auto;">Réassigner</button>
+    </div>
+  </div>
+</div>
+
+<!-- BADGE + MODAL : RENDEZ-VOUS EN ATTENTE D'ATTRIBUTION (premier arrivé, premier servi) -->
+<button id="pendingClaimsBadge" class="pending-claims-badge" style="display:none;" onclick="openPendingClaimsModal()">
+  🔔 <span id="pendingClaimsCount"></span> RDV à attribuer
+</button>
+
+<div class="modal-overlay" id="pendingClaimsModalOverlay">
+  <div class="modal" style="max-width:540px;">
+    <h2>📅 Rendez-vous à attribuer</h2>
+    <p class="modal-sub">Réservé via un lien générique, non encore rattaché à l'un de vous trois. Dès que l'un de vous le prend, il disparaît chez les autres.</p>
+    <div id="pendingClaimsList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="closePendingClaimsBtn">Fermer</button>
     </div>
   </div>
 </div>
@@ -771,11 +799,15 @@ async function initAppAfterLogin(){
   restoreDomaineTab();
   restoreViewMode();
   const ok = await loadProspects();
+  await loadPendingClaims();
   if(ok){
     showApp();
     hideLoading();
     setupRealtime();
+    setupClaimsBroadcast();
     renderAll();
+    renderPendingClaims();
+    if(pendingClaims.length) openPendingClaimsModal();
   } else {
     hideLoading();
     showApp(); // on affiche quand même l'app avec l'erreur visible, pas un tableau vide silencieux
@@ -852,13 +884,15 @@ async function loadProspects(){
    ============================================================ */
 function setupRealtime(){
   if(realtimeChannel) return;
+  // Pas de filtre ici : la RLS Postgres fait déjà le tri (nos propres prospects
+  // + les RDV non encore attribués, user_id IS NULL) — ça permet aussi de recevoir
+  // les prospects qu'un collègue vient de nous réassigner.
   realtimeChannel = supabaseClient
     .channel('prospects-changes-' + session.user.id)
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
-      table: 'prospects',
-      filter: 'user_id=eq.' + session.user.id
+      table: 'prospects'
     }, (payload)=>{
       handleRealtimeEvent(payload);
     })
@@ -867,20 +901,39 @@ function setupRealtime(){
 
 function handleRealtimeEvent(payload){
   if(payload.eventType === 'INSERT'){
-    if(!prospects.find(p=>p.id === payload.new.id)){
+    if(payload.new.user_id === null){
+      if(!pendingClaims.find(p=>p.id === payload.new.id)){
+        pendingClaims.unshift(rowToProspect(payload.new));
+        renderPendingClaims();
+        openPendingClaimsModal(); // pop-up automatique dès qu'un nouveau RDV arrive
+      }
+    } else if(!prospects.find(p=>p.id === payload.new.id)){
       prospects.unshift(rowToProspect(payload.new));
     }
   } else if(payload.eventType === 'UPDATE'){
-    const idx = prospects.findIndex(p=>p.id === payload.new.id);
-    if(idx !== -1){
-      prospects[idx] = rowToProspect(payload.new);
+    // Retire d'une éventuelle liste d'attente (ex: c'est nous qui venons de le récupérer)
+    pendingClaims = pendingClaims.filter(p=>p.id !== payload.new.id);
+    renderPendingClaims();
+
+    if(payload.new.user_id === null){
+      if(!pendingClaims.find(p=>p.id === payload.new.id)){
+        pendingClaims.unshift(rowToProspect(payload.new));
+        renderPendingClaims();
+      }
     } else {
-      // Ligne qui vient de correspondre à notre filtre (ex: prospect qu'un
-      // collègue vient de nous réassigner) : on l'ajoute comme une nouvelle entrée.
-      prospects.unshift(rowToProspect(payload.new));
+      const idx = prospects.findIndex(p=>p.id === payload.new.id);
+      if(idx !== -1){
+        prospects[idx] = rowToProspect(payload.new);
+      } else {
+        // Ligne qui vient de correspondre à notre filtre (ex: prospect qu'un
+        // collègue vient de nous réassigner) : on l'ajoute comme une nouvelle entrée.
+        prospects.unshift(rowToProspect(payload.new));
+      }
     }
   } else if(payload.eventType === 'DELETE'){
     prospects = prospects.filter(p=>p.id !== payload.old.id);
+    pendingClaims = pendingClaims.filter(p=>p.id !== payload.old.id);
+    renderPendingClaims();
   }
   renderAll();
 }
@@ -1157,13 +1210,6 @@ async function copyBookingLink(id){
    LIEN DE CAMPAGNE GÉNÉRIQUE (choix de l'associé destinataire)
    ============================================================ */
 function openCampaignLinkModal(){
-  const toggle = $('campaignAssocieToggle');
-  toggle.innerHTML = ASSOCIES.map((a, i)=>`
-    <div class="domaine-radio">
-      <input type="radio" name="campaign_associe" id="campaign_associe_${a.key}" value="${a.key}" ${i===0?'checked':''}>
-      <label for="campaign_associe_${a.key}">${escapeHtml(a.name)}</label>
-    </div>
-  `).join('');
   $('campaignLinkModalOverlay').style.display = 'flex';
 }
 $('campaignLinkBtn').addEventListener('click', openCampaignLinkModal);
@@ -1177,9 +1223,8 @@ $('copyCampaignLinkBtn').addEventListener('click', async ()=>{
     alert("Pensez d'abord à renseigner l'URL réelle de la page RDV dans la constante BOOKING_PAGE_URL du code.");
     return;
   }
-  const associeKey = document.querySelector('input[name="campaign_associe"]:checked').value;
   const domaine = document.querySelector('input[name="campaign_domaine"]:checked').value;
-  const link = `${BOOKING_PAGE_URL}?associe=${associeKey}&domaine=${domaine}`;
+  const link = `${BOOKING_PAGE_URL}?domaine=${domaine}`;
   try{
     await navigator.clipboard.writeText(link);
     alert('Lien de campagne copié ✅\n\n' + link);
@@ -1190,6 +1235,105 @@ $('copyCampaignLinkBtn').addEventListener('click', async ()=>{
 });
 
 /* ============================================================
+   RDV EN ATTENTE D'ATTRIBUTION (premier arrivé, premier servi)
+   ============================================================ */
+let pendingClaims = [];
+let claimsBroadcastChannel = null;
+
+async function loadPendingClaims(){
+  try{
+    const { data, error } = await supabaseClient
+      .from('prospects')
+      .select('*')
+      .is('user_id', null)
+      .order('date_rdv', { ascending: true });
+    if(error) return;
+    pendingClaims = (data||[]).map(rowToProspect);
+  }catch(e){ /* silencieux : ce n'est pas bloquant pour le reste du CRM */ }
+}
+
+function setupClaimsBroadcast(){
+  if(claimsBroadcastChannel) return;
+  claimsBroadcastChannel = supabaseClient.channel('prospects-claims-broadcast');
+  claimsBroadcastChannel
+    .on('broadcast', { event: 'claimed' }, (msg)=>{
+      const id = msg.payload && msg.payload.id;
+      if(!id) return;
+      pendingClaims = pendingClaims.filter(p=>p.id !== id);
+      renderPendingClaims();
+    })
+    .subscribe();
+}
+
+function renderPendingClaims(){
+  const badge = $('pendingClaimsBadge');
+  if(pendingClaims.length){
+    badge.style.display = 'flex';
+    $('pendingClaimsCount').textContent = pendingClaims.length;
+  } else {
+    badge.style.display = 'none';
+  }
+
+  const list = $('pendingClaimsList');
+  if(!pendingClaims.length){
+    list.innerHTML = '<p class="hint" style="color:var(--muted); text-align:center; padding:24px 0;">Aucun rendez-vous en attente pour le moment.</p>';
+    return;
+  }
+  list.innerHTML = pendingClaims.map(p=>{
+    const dt = p.dateRdv ? new Date(p.dateRdv) : null;
+    const dateStr = dt ? dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) : 'Date non précisée';
+    const timeStr = dt ? ('à ' + dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })) : '';
+    const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
+    const coord = [p.telephone, p.email].filter(Boolean).join(' · ');
+    return `
+    <div class="pending-claim-item">
+      <div>
+        <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
+        <span class="badge ${domaineBadgeClass}" style="margin-left:6px;">${p.domaine}</span>
+        ${p.societe ? `<div class="pc-meta">${escapeHtml(p.societe)}</div>` : ''}
+        ${coord ? `<div class="pc-meta">${escapeHtml(coord)}</div>` : ''}
+        <div class="pc-date">${dateStr} ${timeStr}</div>
+      </div>
+      <button class="btn-sm primary" onclick="claimProspect('${p.id}')">Je le prends</button>
+    </div>`;
+  }).join('');
+}
+
+function openPendingClaimsModal(){
+  renderPendingClaims();
+  $('pendingClaimsModalOverlay').style.display = 'flex';
+}
+$('closePendingClaimsBtn').addEventListener('click', ()=>{ $('pendingClaimsModalOverlay').style.display = 'none'; });
+$('pendingClaimsModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'pendingClaimsModalOverlay'){ $('pendingClaimsModalOverlay').style.display = 'none'; }
+});
+
+async function claimProspect(id){
+  try{
+    const { data, error } = await supabaseClient.rpc('claim_prospect', { p_id: id });
+    if(error || data !== true){
+      // Quelqu'un d'autre l'a très probablement déjà pris entre-temps.
+      pendingClaims = pendingClaims.filter(p=>p.id !== id);
+      renderPendingClaims();
+      showGlobalError("Ce rendez-vous vient d'être attribué par un collègue.");
+      return;
+    }
+    const { data: fresh } = await supabaseClient.from('prospects').select('*').eq('id', id).single();
+    if(fresh && !prospects.find(p=>p.id === fresh.id)){
+      prospects.unshift(rowToProspect(fresh));
+    }
+    pendingClaims = pendingClaims.filter(p=>p.id !== id);
+    renderPendingClaims();
+    renderAll();
+    if(claimsBroadcastChannel){
+      claimsBroadcastChannel.send({ type:'broadcast', event:'claimed', payload:{ id } });
+    }
+  }catch(e){
+    showGlobalError("Erreur réseau lors de l'attribution du rendez-vous.");
+  }
+}
+
+/* ============================================================
    RÉASSIGNATION (transférer un prospect + son RDV vers un autre associé)
    ============================================================ */
 let pendingReassignId = null;
@@ -1198,7 +1342,9 @@ function openReassignModal(id){
   pendingReassignId = id;
   $('reassignFormError').style.display = 'none';
   const toggle = $('reassignAssocieToggle');
-  toggle.innerHTML = ASSOCIES.map((a, i)=>`
+  const others = ASSOCIES.filter(a => a.userId !== session.user.id);
+  const list = others.length ? others : ASSOCIES; // sécurité si jamais aucune correspondance trouvée
+  toggle.innerHTML = list.map((a, i)=>`
     <div class="domaine-radio">
       <input type="radio" name="reassign_associe" id="reassign_associe_${a.key}" value="${a.userId}" ${i===0?'checked':''}>
       <label for="reassign_associe_${a.key}">${escapeHtml(a.name)}</label>
