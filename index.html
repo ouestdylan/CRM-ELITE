@@ -402,6 +402,7 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
       <button class="btn-sm" id="importBtn">Importer CSV</button>
       <input type="file" id="csvFileInput" accept=".csv">
       <button class="btn-sm" id="exportBtn">Exporter CSV</button>
+      <button class="btn-sm" id="campaignLinkBtn">🔗 Lien de campagne</button>
       <button class="btn-sm primary" id="addProspectBtn">+ Nouveau prospect</button>
     </section>
 
@@ -546,6 +547,37 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   </div>
 </div>
 
+<!-- MODAL LIEN DE CAMPAGNE (choix de l'associé destinataire) -->
+<div class="modal-overlay" id="campaignLinkModalOverlay">
+  <div class="modal" style="max-width:460px;">
+    <h2>Lien de campagne générique</h2>
+    <p class="modal-sub">Ce lien ne sera pas personnalisé pour un prospect précis : la personne qui clique renseigne elle-même ses coordonnées, puis le rendez-vous est enregistré dans le CRM que vous choisissez ci-dessous.</p>
+    <div class="form-grid">
+      <div class="full">
+        <label>Va dans le CRM de</label>
+        <div class="domaine-toggle" id="campaignAssocieToggle"></div>
+      </div>
+      <div class="full">
+        <label>Domaine</label>
+        <div class="domaine-toggle">
+          <div class="domaine-radio">
+            <input type="radio" name="campaign_domaine" id="campaign_domaine_cgp" value="CGP" checked>
+            <label for="campaign_domaine_cgp">CGP</label>
+          </div>
+          <div class="domaine-radio">
+            <input type="radio" name="campaign_domaine" id="campaign_domaine_solaire" value="Solaire">
+            <label for="campaign_domaine_solaire">Solaire</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cancelCampaignLinkBtn">Annuler</button>
+      <button type="button" class="btn btn-primary" id="copyCampaignLinkBtn" style="width:auto;">Copier le lien</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    CONFIGURATION SUPABASE
@@ -557,6 +589,16 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_VdUbxcgsZ3y9Wms3B0RS1Q_dXl_77Ou
 // (ex: 'https://mondomaine.fr/rdv.html'). Sert à générer le lien de prise
 // de RDV personnalisé de chaque prospect.
 const BOOKING_PAGE_URL = 'https://contact-elite.vercel.app';
+
+// ⚠️ À REMPLACER par les vrais associés : "key" = identifiant court utilisé
+// dans l'URL (?associe=dylan), "name" = affiché dans le CRM, "userId" = UID
+// Supabase de son compte (Authentication → Users → colonne UID).
+// Cette même liste doit être recopiée à l'identique dans rdv.html / index.html.
+const ASSOCIES = [
+  { key: 'dylan',   name: 'Dylan',   userId: 'ec338b51-6d1e-4954-aef2-e39dfeb552b2' },
+  { key: 'ruben',   name: 'Ruben',   userId: 'cf144b42-da03-4181-b687-8abdd32632d8' },
+  { key: 'vincent', name: 'Vincent', userId: '369568bc-e686-48f1-9c19-b40245190b88' }
+];
 
 const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -1084,6 +1126,42 @@ async function copyBookingLink(id){
     prompt('Copiez ce lien de prise de RDV :', link);
   }
 }
+
+/* ============================================================
+   LIEN DE CAMPAGNE GÉNÉRIQUE (choix de l'associé destinataire)
+   ============================================================ */
+function openCampaignLinkModal(){
+  const toggle = $('campaignAssocieToggle');
+  toggle.innerHTML = ASSOCIES.map((a, i)=>`
+    <div class="domaine-radio">
+      <input type="radio" name="campaign_associe" id="campaign_associe_${a.key}" value="${a.key}" ${i===0?'checked':''}>
+      <label for="campaign_associe_${a.key}">${escapeHtml(a.name)}</label>
+    </div>
+  `).join('');
+  $('campaignLinkModalOverlay').style.display = 'flex';
+}
+$('campaignLinkBtn').addEventListener('click', openCampaignLinkModal);
+$('cancelCampaignLinkBtn').addEventListener('click', ()=>{ $('campaignLinkModalOverlay').style.display = 'none'; });
+$('campaignLinkModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'campaignLinkModalOverlay'){ $('campaignLinkModalOverlay').style.display = 'none'; }
+});
+
+$('copyCampaignLinkBtn').addEventListener('click', async ()=>{
+  if(BOOKING_PAGE_URL.includes('VOTRE-DOMAINE')){
+    alert("Pensez d'abord à renseigner l'URL réelle de la page RDV dans la constante BOOKING_PAGE_URL du code.");
+    return;
+  }
+  const associeKey = document.querySelector('input[name="campaign_associe"]:checked').value;
+  const domaine = document.querySelector('input[name="campaign_domaine"]:checked').value;
+  const link = `${BOOKING_PAGE_URL}?associe=${associeKey}&domaine=${domaine}`;
+  try{
+    await navigator.clipboard.writeText(link);
+    alert('Lien de campagne copié ✅\n\n' + link);
+  }catch(e){
+    prompt('Copiez ce lien de campagne :', link);
+  }
+  $('campaignLinkModalOverlay').style.display = 'none';
+});
 
 /* ============================================================
    FORMULAIRE / MODAL
@@ -1729,14 +1807,16 @@ async function processImportRows(rows, delimiter){
    ============================================================ */
 $('exportBtn').addEventListener('click', ()=>{
   const list = getFilteredSorted();
-  const headers = ['nom','prenom','societe','adresse','code_postal','ville','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits'];
+  const headers = ['nom','prenom','societe','adresse','code_postal','ville','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits','lien_rdv'];
   const csvRows = [headers.join(',')];
   list.forEach(p=>{
+    const lienRdv = BOOKING_PAGE_URL.includes('VOTRE-DOMAINE') ? '' : `${BOOKING_PAGE_URL}?id=${p.id}`;
     const row = [
       p.nom,p.prenom,p.societe,p.adresse,p.codePostal,p.ville,p.telephone,p.email,p.siteweb,p.domaine,p.typeCabinet,
       p.statut,p.priorite,p.dernierContact||'',p.prochaineRelance||'',p.budget!=null?p.budget:'',
       (p.notes||'').replace(/[\r\n,]/g,' '),
-      (p.produits||[]).join(';')
+      (p.produits||[]).join(';'),
+      lienRdv
     ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`);
     csvRows.push(row.join(','));
   });
