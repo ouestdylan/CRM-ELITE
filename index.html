@@ -578,6 +578,25 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
   </div>
 </div>
 
+<!-- MODAL RÉASSIGNATION (transférer un prospect + son RDV vers un autre associé) -->
+<div class="modal-overlay" id="reassignModalOverlay">
+  <div class="modal" style="max-width:420px;">
+    <h2>Réassigner ce prospect</h2>
+    <p class="modal-sub">Le prospect (et son rendez-vous éventuel) basculera immédiatement dans le CRM de l'associé choisi — il disparaîtra du vôtre.</p>
+    <div class="form-error" id="reassignFormError"></div>
+    <div class="form-grid">
+      <div class="full">
+        <label>Nouvel associé</label>
+        <div class="domaine-toggle" id="reassignAssocieToggle"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="cancelReassignBtn">Annuler</button>
+      <button type="button" class="btn btn-primary" id="confirmReassignBtn" style="width:auto;">Réassigner</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    CONFIGURATION SUPABASE
@@ -853,7 +872,13 @@ function handleRealtimeEvent(payload){
     }
   } else if(payload.eventType === 'UPDATE'){
     const idx = prospects.findIndex(p=>p.id === payload.new.id);
-    if(idx !== -1) prospects[idx] = rowToProspect(payload.new);
+    if(idx !== -1){
+      prospects[idx] = rowToProspect(payload.new);
+    } else {
+      // Ligne qui vient de correspondre à notre filtre (ex: prospect qu'un
+      // collègue vient de nous réassigner) : on l'ajoute comme une nouvelle entrée.
+      prospects.unshift(rowToProspect(payload.new));
+    }
   } else if(payload.eventType === 'DELETE'){
     prospects = prospects.filter(p=>p.id !== payload.old.id);
   }
@@ -961,6 +986,7 @@ function renderRdvView(){
       <div class="rdv-actions">
         ${p.telephone ? `<a class="icon-btn" href="tel:${escapeHtml(p.telephone)}" title="Appeler">📞</a>` : ''}
         ${p.email ? `<a class="icon-btn" href="#" onclick="onEmailClick('${p.id}'); return false;" title="Ouvrir dans Google Agenda">📅</a>` : ''}
+        <button class="icon-btn" onclick="openReassignModal('${p.id}')" title="Réassigner à un autre associé">↔️</button>
         <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
       </div>
     </div>`;
@@ -1161,6 +1187,58 @@ $('copyCampaignLinkBtn').addEventListener('click', async ()=>{
     prompt('Copiez ce lien de campagne :', link);
   }
   $('campaignLinkModalOverlay').style.display = 'none';
+});
+
+/* ============================================================
+   RÉASSIGNATION (transférer un prospect + son RDV vers un autre associé)
+   ============================================================ */
+let pendingReassignId = null;
+
+function openReassignModal(id){
+  pendingReassignId = id;
+  $('reassignFormError').style.display = 'none';
+  const toggle = $('reassignAssocieToggle');
+  toggle.innerHTML = ASSOCIES.map((a, i)=>`
+    <div class="domaine-radio">
+      <input type="radio" name="reassign_associe" id="reassign_associe_${a.key}" value="${a.userId}" ${i===0?'checked':''}>
+      <label for="reassign_associe_${a.key}">${escapeHtml(a.name)}</label>
+    </div>
+  `).join('');
+  $('reassignModalOverlay').style.display = 'flex';
+}
+$('cancelReassignBtn').addEventListener('click', ()=>{ $('reassignModalOverlay').style.display = 'none'; pendingReassignId = null; });
+$('reassignModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'reassignModalOverlay'){ $('reassignModalOverlay').style.display = 'none'; pendingReassignId = null; }
+});
+
+$('confirmReassignBtn').addEventListener('click', async ()=>{
+  if(!pendingReassignId) return;
+  const newUserId = document.querySelector('input[name="reassign_associe"]:checked').value;
+  const id = pendingReassignId;
+
+  const btn = $('confirmReassignBtn');
+  btn.disabled = true; btn.textContent = 'Réassignation…';
+
+  try{
+    const { data, error } = await supabaseClient.rpc('reassign_prospect', { p_id: id, p_new_user_id: newUserId });
+    btn.disabled = false; btn.textContent = 'Réassigner';
+
+    if(error || data !== true){
+      $('reassignFormError').textContent = "La réassignation a échoué. Réessayez, ou vérifiez la fonction reassign_prospect côté Supabase.";
+      $('reassignFormError').style.display = 'block';
+      return;
+    }
+
+    // Le prospect ne nous appartient plus : il disparaît de notre propre vue.
+    prospects = prospects.filter(p => p.id !== id);
+    $('reassignModalOverlay').style.display = 'none';
+    pendingReassignId = null;
+    renderAll();
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'Réassigner';
+    $('reassignFormError').textContent = "Erreur réseau pendant la réassignation.";
+    $('reassignFormError').style.display = 'block';
+  }
 });
 
 /* ============================================================
@@ -1446,6 +1524,7 @@ function renderTable(){
       <td>
         <div class="row-actions">
           <button class="icon-btn" onclick="copyBookingLink('${p.id}')" title="Copier le lien de prise de RDV">🔗</button>
+          <button class="icon-btn" onclick="openReassignModal('${p.id}')" title="Réassigner à un autre associé">↔️</button>
           <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
           <button class="icon-btn danger" onclick="deleteProspect('${p.id}')" title="Supprimer">🗑</button>
         </div>
