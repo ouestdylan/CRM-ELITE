@@ -199,6 +199,14 @@
   .btn-sm{padding:9px 14px; border-radius:7px; font-size:13px; font-weight:600; border:1px solid var(--line); background:#fff;}
   .btn-sm.primary{background:var(--red); color:#fff; border-color:var(--red);}
   .btn-sm.gold{background:var(--gold); color:#fff; border-color:var(--gold);}
+  .btn-sm.danger{background:#fff; color:var(--red); border-color:var(--red);}
+  .btn-sm.danger:hover{background:var(--red); color:#fff;}
+  .bulk-actions-bar{
+    display:flex; align-items:center; gap:10px; margin-bottom:16px; padding:12px 14px;
+    background:var(--red-soft); border:1px solid #e3bcbc; border-radius:var(--radius);
+    font-size:13.5px; font-weight:600; color:var(--red);
+  }
+  tr.row-selected{background:#fbf3f3;}
   input[type=file]{display:none;}
 
   /* table */
@@ -417,15 +425,24 @@ a.email-link:hover{color:var(--gold); border-color:var(--gold);}
       <div class="toolbar-spacer"></div>
       <button class="btn-sm" id="importBtn">Importer CSV</button>
       <input type="file" id="csvFileInput" accept=".csv">
+      <button class="btn-sm" id="importEmailBtn">📧 Importer emails (CSV)</button>
+      <input type="file" id="emailCsvFileInput" accept=".csv">
       <button class="btn-sm" id="exportBtn">Exporter CSV</button>
       <button class="btn-sm" id="campaignLinkBtn">🔗 Lien de campagne</button>
       <button class="btn-sm primary" id="addProspectBtn">+ Nouveau prospect</button>
     </section>
 
+    <section class="bulk-actions-bar" id="bulkActionsBar" style="display:none;">
+      <span id="bulkSelectedCount">0 sélectionné(s)</span>
+      <div class="toolbar-spacer"></div>
+      <button class="btn-sm" id="bulkClearSelectionBtn">Désélectionner tout</button>
+      <button class="btn-sm danger" id="bulkDeleteBtn">🗑 Supprimer la sélection</button>
+    </section>
     <section class="table-wrap" id="listeWrap">
       <table>
         <thead>
           <tr>
+            <th style="width:34px;"><input type="checkbox" id="selectAllCheckbox" title="Tout sélectionner"></th>
             <th data-sort="nom">Contact</th>
             <th data-sort="societe">Société / Adresse</th>
             <th>Téléphone</th>
@@ -1111,6 +1128,7 @@ async function deleteProspect(id){
       return;
     }
     prospects = prospects.filter(p=>p.id !== id);
+    selectedIds.delete(id);
     setSaveIndicator('saved', 'Enregistré');
     renderAll();
   }catch(e){
@@ -1118,6 +1136,82 @@ async function deleteProspect(id){
     showGlobalError("Erreur réseau : la suppression n'a pas pu être confirmée.");
   }
 }
+
+/* ============================================================
+   SÉLECTION MULTIPLE / SUPPRESSION GROUPÉE
+   ============================================================ */
+let selectedIds = new Set();
+
+function toggleRowSelection(id, checked){
+  if(checked) selectedIds.add(id); else selectedIds.delete(id);
+  updateBulkActionsBar();
+  // Coche/décoche juste la ligne concernée, sans tout redessiner (évite de perdre le focus)
+  const row = document.querySelector(`.row-select-checkbox[data-id="${id}"]`)?.closest('tr');
+  if(row) row.classList.toggle('row-selected', checked);
+  syncSelectAllCheckbox();
+}
+
+function syncSelectAllCheckbox(){
+  const visibleIds = getFilteredSorted().map(p=>p.id);
+  const allChecked = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+  const someChecked = visibleIds.some(id => selectedIds.has(id));
+  const cb = $('selectAllCheckbox');
+  if(!cb) return;
+  cb.checked = allChecked;
+  cb.indeterminate = !allChecked && someChecked;
+}
+
+$('selectAllCheckbox').addEventListener('change', (e)=>{
+  const visibleIds = getFilteredSorted().map(p=>p.id);
+  if(e.target.checked){
+    visibleIds.forEach(id => selectedIds.add(id));
+  } else {
+    visibleIds.forEach(id => selectedIds.delete(id));
+  }
+  updateBulkActionsBar();
+  renderTable();
+});
+
+function updateBulkActionsBar(){
+  const bar = $('bulkActionsBar');
+  if(selectedIds.size > 0){
+    bar.style.display = 'flex';
+    $('bulkSelectedCount').textContent = `${selectedIds.size} sélectionné(s)`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+$('bulkClearSelectionBtn').addEventListener('click', ()=>{
+  selectedIds.clear();
+  updateBulkActionsBar();
+  renderTable();
+});
+
+$('bulkDeleteBtn').addEventListener('click', async ()=>{
+  const ids = Array.from(selectedIds);
+  if(!ids.length) return;
+  if(!confirm(`Supprimer définitivement ${ids.length} prospect(s) ? Cette action est irréversible.`)) return;
+
+  setSaveIndicator('saving', 'Suppression…');
+  try{
+    const { error } = await supabaseClient
+      .from('prospects').delete().in('id', ids).eq('user_id', session.user.id);
+    if(error){
+      setSaveIndicator('error', 'Erreur de sauvegarde');
+      showGlobalError("La suppression groupée a échoué (" + error.message + ").");
+      return;
+    }
+    prospects = prospects.filter(p => !selectedIds.has(p.id));
+    selectedIds.clear();
+    setSaveIndicator('saved', 'Enregistré');
+    updateBulkActionsBar();
+    renderAll();
+  }catch(e){
+    setSaveIndicator('error', 'Erreur de sauvegarde');
+    showGlobalError("Erreur réseau pendant la suppression groupée.");
+  }
+});
 
 /* Sauvegarde rapide d'un champ (statut, priorité, produits, dates) */
 async function quickUpdate(id, field, value){
@@ -1628,8 +1722,10 @@ function renderTable(){
     const produitsCount = (p.produits||[]).length;
     const produitsTitle = produitsCount ? escapeHtml((p.produits||[]).join(', ')) : '';
     const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
+    const isChecked = selectedIds.has(p.id);
     return `
-    <tr>
+    <tr class="${isChecked ? 'row-selected' : ''}">
+      <td><input type="checkbox" class="row-select-checkbox" data-id="${p.id}" ${isChecked ? 'checked' : ''} onchange="toggleRowSelection('${p.id}', this.checked)"></td>
       <td class="name-cell">
         <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
         ${p.typeCabinet ? `<span class="type-tag" title="Type">${escapeHtml(p.typeCabinet)}</span>` : ''}
@@ -1677,6 +1773,7 @@ function renderTable(){
       </td>
     </tr>`;
   }).join('');
+  syncSelectAllCheckbox();
 }
 
 function escapeHtml(str){
@@ -2026,6 +2123,139 @@ async function processImportRows(rows, delimiter){
     showGlobalError("Erreur réseau pendant l'import CSV.");
   }
 }
+
+/* ============================================================
+   IMPORT EMAILS (CSV) — ne touche qu'au champ email, en retrouvant les
+   prospects existants par téléphone (prioritaire) ou par nom/prénom.
+   N'écrase jamais un email déjà renseigné, et ne crée aucun prospect.
+   ============================================================ */
+$('importEmailBtn').addEventListener('click', ()=>$('emailCsvFileInput').click());
+$('emailCsvFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const text = await file.text();
+  await importEmailsCsv(text);
+  e.target.value = '';
+});
+
+function normalizePhoneDigits(v){
+  return String(v||'').replace(/\D/g, '');
+}
+
+function findEmailHeaderKey(headers){
+  if(headers.includes('email')) return 'email';
+  if(headers.includes('mail')) return 'mail';
+  const match = headers.find(h => /\bemail\b/.test(h) || /\bmail\b/.test(h));
+  return match || null;
+}
+
+function findTelephoneHeaderKey(headers){
+  if(headers.includes('telephone')) return 'telephone';
+  if(headers.includes('tel')) return 'tel';
+  if(headers.includes('phone')) return 'phone';
+  const match = headers.find(h => /\btelephone\b/.test(h) || /\btel\b/.test(h) || /\bphone\b/.test(h));
+  return match || null;
+}
+
+async function importEmailsCsv(text){
+  const { rawRows } = tokenizeCsv(text);
+  if(!rawRows.length){
+    showGlobalError("Le fichier est vide ou illisible.");
+    return;
+  }
+
+  // Cherche, parmi les 10 premières lignes, celle qui contient une colonne "email"
+  let headerIdx = -1, headers = null;
+  const searchLimit = Math.min(10, rawRows.length);
+  for(let i=0; i<searchLimit; i++){
+    const candidate = rawRows[i].map(h => stripAccents(h).trim().toLowerCase());
+    if(findEmailHeaderKey(candidate)){ headerIdx = i; headers = candidate; break; }
+  }
+
+  if(headerIdx === -1){
+    showGlobalError("Aucune colonne « email » reconnue dans ce fichier. Ajoutez un en-tête « email » sur la première ligne, puis réessayez.");
+    return;
+  }
+
+  const emailKey = findEmailHeaderKey(headers);
+  const telKey = findTelephoneHeaderKey(headers);
+  const nomKey = findNomHeaderKey(headers);
+
+  if(!telKey && !nomKey){
+    showGlobalError("Il faut au moins une colonne « téléphone » ou « nom » dans le fichier pour retrouver les bons prospects.");
+    return;
+  }
+
+  const rows = rawRows.slice(headerIdx + 1).map(cols=>{
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = (cols[i]!=null ? String(cols[i]) : '').trim());
+    return obj;
+  });
+
+  let notFound = 0, alreadyFilled = 0, noEmailInRow = 0, duplicateMatch = 0;
+  const updates = []; // { id, email }
+  const usedIds = new Set();
+
+  rows.forEach(r=>{
+    const email = (r[emailKey] || '').trim();
+    if(!email){ noEmailInRow++; return; }
+
+    const telDigits = telKey ? normalizePhoneDigits(r[telKey]) : '';
+    const nom = nomKey ? (r[nomKey] || '').trim().toLowerCase() : '';
+    const prenom = (r['prenom'] || '').trim().toLowerCase();
+
+    let matches = [];
+    if(telDigits){
+      matches = prospects.filter(p => p.telephone && normalizePhoneDigits(p.telephone) === telDigits);
+    }
+    if(!matches.length && nom){
+      matches = prospects.filter(p =>
+        p.nom.trim().toLowerCase() === nom && (!prenom || p.prenom.trim().toLowerCase() === prenom)
+      );
+    }
+
+    if(!matches.length){ notFound++; return; }
+    if(matches.length > 1){ duplicateMatch++; return; } // ambigu, on préfère ne rien toucher
+    const match = matches[0];
+    if(usedIds.has(match.id)) return; // déjà traité par une ligne précédente de ce même fichier
+    if(match.email && match.email.trim()){ alreadyFilled++; return; }
+
+    usedIds.add(match.id);
+    updates.push({ id: match.id, email });
+  });
+
+  if(!updates.length){
+    showGlobalError(`Aucun email ajouté. (${notFound} prospect(s) non retrouvé(s), ${alreadyFilled} avaient déjà un email, ${duplicateMatch} correspondance(s) ambiguë(s), ${noEmailInRow} ligne(s) sans email.)`);
+    return;
+  }
+
+  setSaveIndicator('saving', 'Import des emails…');
+  let done = 0, failed = 0;
+  for(const u of updates){
+    try{
+      const { error } = await supabaseClient
+        .from('prospects')
+        .update({ email: u.email, updated_at: new Date().toISOString() })
+        .eq('id', u.id)
+        .eq('user_id', session.user.id);
+      if(error){ failed++; continue; }
+      const p = prospects.find(x => x.id === u.id);
+      if(p) p.email = u.email;
+      done++;
+    }catch(e){ failed++; }
+  }
+
+  setSaveIndicator(failed ? 'error' : 'saved', failed ? 'Erreur partielle' : 'Enregistré');
+  renderAll();
+
+  const extra = [];
+  if(notFound) extra.push(`${notFound} non retrouvé(s)`);
+  if(alreadyFilled) extra.push(`${alreadyFilled} avaient déjà un email`);
+  if(duplicateMatch) extra.push(`${duplicateMatch} correspondance(s) ambiguë(s) ignorée(s)`);
+  if(failed) extra.push(`${failed} échec(s) d'enregistrement`);
+  alert(`${done} email(s) ajouté(s) avec succès.${extra.length ? '\n(' + extra.join(', ') + ')' : ''}`);
+}
+
 
 /* ============================================================
    EXPORT CSV
