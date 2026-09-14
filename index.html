@@ -117,7 +117,51 @@
   }
   .logout-btn:hover{background:rgba(255,255,255,.1);}
 
-  main{max-width:1400px; margin:0 auto; padding:24px 26px 60px;}
+  /* ---------- STRUCTURE GÉNÉRALE : sidebar + pages ---------- */
+  #app{display:none; min-height:100vh;}
+  .app-shell{display:flex; min-height:100vh;}
+  .sidebar{
+    width:226px; flex:0 0 226px; background:var(--ink); color:#fff;
+    display:flex; flex-direction:column; padding:18px 0 24px; position:sticky; top:0;
+    height:100vh; overflow-y:auto;
+  }
+  .sidebar-brand{
+    display:flex; align-items:center; gap:10px; padding:0 18px 18px;
+    border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:14px;
+  }
+  .sidebar-brand .brand-mark{width:30px; height:30px;}
+  .sidebar-brand .brand-name{font-size:13.5px; font-weight:700; line-height:1.25;}
+  .sidebar-brand .brand-name span{display:block; font-size:10.5px; font-weight:400; color:#9aa6bd; margin-top:1px;}
+  .sidebar-nav{display:flex; flex-direction:column; gap:2px; padding:0 10px;}
+  .sidebar-nav-item{
+    display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:8px;
+    color:#c3cbdb; font-size:13px; font-weight:600; cursor:pointer; border:none; background:none;
+    text-align:left; width:100%; font-family:inherit;
+  }
+  .sidebar-nav-item:hover{background:rgba(255,255,255,.07); color:#fff;}
+  .sidebar-nav-item.active{background:var(--red); color:#fff;}
+  .sidebar-nav-item .snav-icon{font-size:15px; width:18px; text-align:center; flex:0 0 auto;}
+  .sidebar-nav-item .snav-badge{
+    margin-left:auto; background:rgba(255,255,255,.18); color:#fff; border-radius:20px;
+    padding:1px 7px; font-size:10.5px; font-weight:700;
+  }
+  .sidebar-nav-item.active .snav-badge{background:rgba(255,255,255,.3);}
+  .app-main{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .page{display:none;}
+  .page.active{display:block;}
+  .page-header{margin-bottom:18px;}
+  .page-header h2{font-size:21px; color:var(--text, var(--ink));}
+  .page-header p{color:var(--muted); font-size:13px; margin-top:4px;}
+
+  main{max-width:1400px; margin:0 auto; padding:24px 26px 60px; width:100%;}
+
+  @media (max-width:900px){
+    .app-shell{flex-direction:column;}
+    .sidebar{width:100%; flex:0 0 auto; height:auto; position:sticky; top:0; padding:10px 0; z-index:60;}
+    .sidebar-brand{display:none;}
+    .sidebar-nav{flex-direction:row; overflow-x:auto; padding:0 10px; gap:6px;}
+    .sidebar-nav-item{flex:0 0 auto; white-space:nowrap; padding:9px 14px;}
+  }
 
   #globalError{
     display:none; background:var(--red-soft); border:1px solid #e3bcbc; color:var(--red);
@@ -335,6 +379,38 @@
   .pending-claim-item .pc-date{color:var(--muted); font-size:12.5px; text-transform:capitalize; margin-top:2px;}
   .pending-claim-item .pc-meta{color:var(--muted); font-size:12.5px; margin-top:2px;}
 
+  /* ---------- Page Ventes : pipeline Kanban ---------- */
+  .kanban-board{display:flex; gap:14px; overflow-x:auto; padding-bottom:12px;}
+  .kanban-col{
+    flex:0 0 232px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    display:flex; flex-direction:column; max-height:640px;
+  }
+  .kanban-col-header{
+    padding:12px 14px; border-bottom:1px solid var(--line); font-size:12px; font-weight:700;
+    display:flex; justify-content:space-between; align-items:center; text-transform:uppercase; letter-spacing:.03em;
+    color:var(--muted);
+  }
+  .kanban-count-badge{background:#eef0f4; color:#4a5568; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:700;}
+  .kanban-col-body{padding:10px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;}
+  .kanban-card{
+    background:#fbfaf7; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:12.5px; cursor:pointer;
+  }
+  .kanban-card:hover{border-color:var(--gold);}
+  .kanban-card strong{display:block; font-size:12.5px;}
+  .kanban-card .kc-meta{color:var(--muted); font-size:11px; margin-top:2px;}
+  .kanban-empty{padding:20px 10px; text-align:center; color:var(--muted); font-size:12px;}
+
+  /* ---------- Page Équipe ---------- */
+  .associe-list{display:flex; flex-direction:column; gap:10px; margin-bottom:26px;}
+  .associe-card{
+    display:flex; align-items:center; justify-content:space-between; background:var(--card);
+    border:1px solid var(--line); border-radius:var(--radius); padding:15px 18px;
+  }
+  .associe-card .assoc-name{font-weight:700; font-size:14px;}
+  .associe-card .assoc-meta{color:var(--muted); font-size:12px; margin-top:2px;}
+  .section-block-title{font-size:15px; font-weight:700; margin:26px 0 12px;}
+  .section-block-title:first-child{margin-top:0;}
+
   @media (max-width:900px){
     .stats{grid-template-columns:repeat(2,1fr);}
     .form-grid{grid-template-columns:1fr;}
@@ -373,101 +449,176 @@
 </div>
 
 <!-- APP -->
-<div id="app">
-  <header class="topbar">
-    <div class="topbar-left">
-  <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
-      <div>
-        <div class="sub">Leads · CGP (Trésorerie, Assurance-vie, Crédit lombard, Produits structurés, Défisc.) · Solaire</div>
+<div id="app" class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
+      <div class="brand-name">Suivi Prospection<span>CGP &amp; Solaire</span></div>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-item" data-page="dashboard" onclick="switchPage('dashboard')"><span class="snav-icon">📊</span> Tableau de bord</button>
+      <button class="sidebar-nav-item" data-page="prospects" onclick="switchPage('prospects')"><span class="snav-icon">👤</span> Prospects</button>
+      <button class="sidebar-nav-item" data-page="rdv" onclick="switchPage('rdv')"><span class="snav-icon">📅</span> Rendez-vous <span id="navRdvBadge" class="snav-badge" style="display:none;"></span></button>
+      <button class="sidebar-nav-item" data-page="ventes" onclick="switchPage('ventes')"><span class="snav-icon">💰</span> Ventes</button>
+      <button class="sidebar-nav-item" data-page="campagnes" onclick="switchPage('campagnes')"><span class="snav-icon">📣</span> Campagnes</button>
+      <button class="sidebar-nav-item" data-page="equipe" onclick="switchPage('equipe')"><span class="snav-icon">👥</span> Équipe <span id="navClaimsBadge" class="snav-badge" style="display:none;"></span></button>
+    </nav>
+  </aside>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
+        <div>
+          <div class="sub">Leads · CGP (Trésorerie, Assurance-vie, Crédit lombard, Produits structurés, Défisc.) · Solaire</div>
+        </div>
       </div>
-    </div>
-    <div class="topbar-right">
-      <div id="saveIndicator" class="state-idle"><span class="dot"></span><span id="saveIndicatorText">Connecté</span></div>
-      <button class="logout-btn" id="logoutBtn">Déconnexion</button>
-    </div>
-  </header>
-
-  <main>
-    <div id="globalError">
-      <span id="globalErrorText"></span>
-      <button id="globalErrorClose">×</button>
-    </div>
-
-    <div class="section-header">
-      <div class="titles">
-        <h2 id="sectionTitle">Tous les prospects</h2>
-        <p id="sectionSubtitle">Vue combinée des deux activités.</p>
+      <div class="topbar-right">
+        <div id="saveIndicator" class="state-idle"><span class="dot"></span><span id="saveIndicatorText">Connecté</span></div>
+        <button class="logout-btn" id="logoutBtn">Déconnexion</button>
       </div>
-      <div class="tabs">
-        <button class="tab-btn" data-domaine="Tous" onclick="setDomaineTab('Tous')">Tous</button>
-        <button class="tab-btn" data-domaine="CGP" onclick="setDomaineTab('CGP')">CGP</button>
-        <button class="tab-btn" data-domaine="Solaire" onclick="setDomaineTab('Solaire')">Solaire</button>
+    </header>
+
+    <main>
+      <div id="globalError">
+        <span id="globalErrorText"></span>
+        <button id="globalErrorClose">×</button>
       </div>
-    </div>
 
-    <section class="stats" id="statsRow"></section>
+      <!-- PAGE : TABLEAU DE BORD -->
+      <div class="page" id="page-dashboard">
+        <div class="page-header">
+          <h2>Tableau de bord</h2>
+          <p>Vue d'ensemble de votre activité de prospection.</p>
+        </div>
+        <section class="stats" id="dashboardStatsRow"></section>
+      </div>
 
-    <div class="view-toggle">
-      <button class="tab-btn view-btn" data-view="liste" onclick="setViewMode('liste')">📋 Liste des prospects</button>
-      <button class="tab-btn view-btn" data-view="rdv" onclick="setViewMode('rdv')">📅 Rendez-vous à venir <span id="rdvCountBadge" class="rdv-count-badge" style="display:none;"></span></button>
-    </div>
+      <!-- PAGE : PROSPECTS -->
+      <div class="page" id="page-prospects">
+        <div class="section-header">
+          <div class="titles">
+            <h2 id="sectionTitle">Tous les prospects</h2>
+            <p id="sectionSubtitle">Vue combinée des deux activités.</p>
+          </div>
+          <div class="tabs">
+            <button class="tab-btn" data-domaine="Tous" onclick="setDomaineTab('Tous')">Tous</button>
+            <button class="tab-btn" data-domaine="CGP" onclick="setDomaineTab('CGP')">CGP</button>
+            <button class="tab-btn" data-domaine="Solaire" onclick="setDomaineTab('Solaire')">Solaire</button>
+          </div>
+        </div>
 
-    <section class="toolbar" id="toolbarSection">
-      <input type="text" id="searchInput" placeholder="Rechercher : nom, société, ville, email…">
-      <select id="filterStatut">
-        <option value="">Tous les statuts</option>
-      </select>
-      <select id="filterPriorite">
-        <option value="">Toutes priorités</option>
-        <option value="Haute">Haute</option>
-        <option value="Moyenne">Moyenne</option>
-        <option value="Basse">Basse</option>
-      </select>
-      <select id="filterProduit">
-        <option value="">Tous produits</option>
-      </select>
-      <div class="toolbar-spacer"></div>
-      <button class="btn-sm" id="importBtn">Importer CSV</button>
-      <input type="file" id="csvFileInput" accept=".csv">
-      <button class="btn-sm" id="exportBtn">Exporter CSV</button>
-      <button class="btn-sm" id="campaignLinkBtn">🔗 Lien de campagne</button>
-      <button class="btn-sm primary" id="addProspectBtn">+ Nouveau prospect</button>
-    </section>
+        <section class="stats" id="statsRow"></section>
 
-    <section class="bulk-actions-bar" id="bulkActionsBar" style="display:none;">
-      <span id="bulkSelectedCount">0 sélectionné(s)</span>
-      <div class="toolbar-spacer"></div>
-      <button class="btn-sm" id="bulkClearSelectionBtn">Désélectionner tout</button>
-      <button class="btn-sm danger" id="bulkDeleteBtn">🗑 Supprimer la sélection</button>
-    </section>
-    <section class="table-wrap" id="listeWrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:34px;"><input type="checkbox" id="selectAllCheckbox" title="Tout sélectionner"></th>
-            <th data-sort="nom">Contact</th>
-            <th data-sort="societe">Société / Adresse</th>
-            <th>Téléphone</th>
-            <th>Email</th>
-            <th data-sort="domaine">Domaine</th>
-            <th data-sort="statut">Statut</th>
-            <th data-sort="priorite">Priorité</th>
-            <th data-sort="date_rdv">RDV / Relance</th>
-            <th data-sort="budget">Budget</th>
+        <section class="toolbar" id="toolbarSection">
+          <input type="text" id="searchInput" placeholder="Rechercher : nom, société, ville, email…">
+          <select id="filterStatut">
+            <option value="">Tous les statuts</option>
+          </select>
+          <select id="filterPriorite">
+            <option value="">Toutes priorités</option>
+            <option value="Haute">Haute</option>
+            <option value="Moyenne">Moyenne</option>
+            <option value="Basse">Basse</option>
+          </select>
+          <select id="filterProduit">
+            <option value="">Tous produits</option>
+          </select>
+          <div class="toolbar-spacer"></div>
+          <button class="btn-sm primary" id="addProspectBtn">+ Nouveau prospect</button>
+        </section>
+
+        <section class="bulk-actions-bar" id="bulkActionsBar" style="display:none;">
+          <span id="bulkSelectedCount">0 sélectionné(s)</span>
+          <div class="toolbar-spacer"></div>
+          <button class="btn-sm" id="bulkClearSelectionBtn">Désélectionner tout</button>
+          <button class="btn-sm danger" id="bulkDeleteBtn">🗑 Supprimer la sélection</button>
+        </section>
+
+        <section class="table-wrap" id="listeWrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:34px;"><input type="checkbox" id="selectAllCheckbox" title="Tout sélectionner"></th>
+                <th data-sort="nom">Contact</th>
+                <th data-sort="societe">Société / Adresse</th>
+                <th>Téléphone</th>
+                <th>Email</th>
+                <th data-sort="domaine">Domaine</th>
+                <th data-sort="statut">Statut</th>
+                <th data-sort="priorite">Priorité</th>
+                <th data-sort="date_rdv">RDV / Relance</th>
+                <th data-sort="budget">Budget</th>
 <th>Produits</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="prospectsBody"></tbody>
-      </table>
-      <div class="empty-state" id="emptyState" style="display:none;">Aucun prospect ne correspond à ces critères.</div>
-    </section>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="prospectsBody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyState" style="display:none;">Aucun prospect ne correspond à ces critères.</div>
+        </section>
+      </div>
 
-    <section class="table-wrap" id="rdvWrap" style="display:none;">
-      <div id="rdvList"></div>
-      <div class="empty-state" id="rdvEmptyState" style="display:none;">Aucun rendez-vous à venir pour le moment.</div>
-    </section>
-  </main>
+      <!-- PAGE : RENDEZ-VOUS -->
+      <div class="page" id="page-rdv">
+        <div class="page-header">
+          <h2>Rendez-vous à venir</h2>
+          <p>Triés du plus proche au plus lointain.</p>
+        </div>
+        <section class="table-wrap" id="rdvWrap">
+          <div id="rdvList"></div>
+          <div class="empty-state" id="rdvEmptyState" style="display:none;">Aucun rendez-vous à venir pour le moment.</div>
+        </section>
+      </div>
+
+      <!-- PAGE : VENTES -->
+      <div class="page" id="page-ventes">
+        <div class="page-header">
+          <h2>Ventes</h2>
+          <p>Chiffre d'affaires généré et pipeline en cours, par statut.</p>
+        </div>
+        <section class="stats" id="salesStatsRow"></section>
+        <div class="section-block-title">Pipeline</div>
+        <div class="kanban-board" id="kanbanBoard"></div>
+      </div>
+
+      <!-- PAGE : CAMPAGNES -->
+      <div class="page" id="page-campagnes">
+        <div class="page-header">
+          <h2>Campagnes</h2>
+          <p>Import/export de listes de prospects, et liens de prise de RDV pour vos mailings.</p>
+        </div>
+
+        <div class="section-block-title">Vos prospects</div>
+        <p style="color:var(--muted); font-size:12.5px; margin:-6px 0 10px;">L'export CSV inclut le lien de prise de RDV personnalisé de chaque prospect (colonne "lien_rdv"), prêt à utiliser dans un mail-merge (Google Sheets + YAMM par exemple).</p>
+        <section class="toolbar">
+          <button class="btn-sm" id="importBtn">Importer CSV</button>
+          <input type="file" id="csvFileInput" accept=".csv">
+          <button class="btn-sm" id="exportBtn">Exporter CSV</button>
+        </section>
+
+        <div class="section-block-title">Lien de prise de RDV générique</div>
+        <p style="color:var(--muted); font-size:12.5px; margin:-6px 0 10px;">À coller dans une signature Gmail ou un mailing en masse (pas de personnalisation par destinataire nécessaire). Le client choisit lui-même son créneau ; le rendez-vous apparaît ensuite dans l'onglet "Équipe" en attente d'attribution.</p>
+        <section class="toolbar">
+          <button class="btn-sm primary" id="campaignLinkBtn">🔗 Générer un lien de campagne</button>
+        </section>
+      </div>
+
+      <!-- PAGE : ÉQUIPE -->
+      <div class="page" id="page-equipe">
+        <div class="page-header">
+          <h2>Équipe</h2>
+          <p>Rendez-vous en attente d'attribution, et vos associés.</p>
+        </div>
+        <div class="section-block-title">📅 Rendez-vous à attribuer</div>
+        <section class="table-wrap" style="margin-bottom:8px;">
+          <div id="pendingClaimsPageList"></div>
+        </section>
+        <div class="section-block-title">Associés</div>
+        <div class="associe-list" id="associeList"></div>
+      </div>
+    </main>
+  </div>
 </div>
 
 <!-- MODAL PROSPECT -->
@@ -711,7 +862,6 @@ let realtimeChannel = null;
 let sortState = { field: 'created_at', dir: 'desc' };
 let notesDebounceTimers = {};
 let currentDomaineTab = 'Tous';  // 'Tous' | 'CGP' | 'Solaire'
-let viewMode = 'liste';          // 'liste' | 'rdv'
 
 /* ============================================================
    HELPERS UI
@@ -743,7 +893,7 @@ function showLogin(){
 }
 function showApp(){
   $('loginScreen').style.display = 'none';
-  $('app').style.display = 'block';
+  $('app').style.display = 'flex';
 }
 
 /* UI preferences only (non critiques) via localStorage */
@@ -817,7 +967,8 @@ async function initAppAfterLogin(){
   showLoading('Chargement de vos prospects…');
   populateStatutSelects();
   restoreDomaineTab();
-  restoreViewMode();
+  restorePage();
+  renderAssocieList();
   const ok = await loadProspects();
   await loadPendingClaims();
   if(ok){
@@ -989,27 +1140,25 @@ function getDomaineScopedList(domaine){
 }
 
 /* ============================================================
-   VUE : LISTE vs RENDEZ-VOUS À VENIR
+   NAVIGATION ENTRE PAGES (sidebar)
    ============================================================ */
-function restoreViewMode(){
-  const saved = loadUiPref('viewMode', 'liste');
-  applyViewMode(saved === 'rdv' ? 'rdv' : 'liste');
+const PAGES = ['dashboard','prospects','rdv','ventes','campagnes','equipe'];
+
+function restorePage(){
+  const saved = loadUiPref('currentPage', 'dashboard');
+  switchPage(PAGES.includes(saved) ? saved : 'dashboard');
 }
 
-function setViewMode(mode){
-  saveUiPref('viewMode', mode);
-  applyViewMode(mode);
-  renderAll();
-}
-
-function applyViewMode(mode){
-  viewMode = mode;
-  document.querySelectorAll('.view-btn').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.view === mode);
+function switchPage(page){
+  if(!PAGES.includes(page)) page = 'dashboard';
+  saveUiPref('currentPage', page);
+  document.querySelectorAll('.sidebar-nav-item').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.page === page);
   });
-  $('toolbarSection').style.display = mode === 'liste' ? 'flex' : 'none';
-  $('listeWrap').style.display = mode === 'liste' ? '' : 'none';
-  $('rdvWrap').style.display = mode === 'rdv' ? '' : 'none';
+  document.querySelectorAll('.page').forEach(el=>{
+    el.classList.toggle('active', el.id === 'page-' + page);
+  });
+  window.scrollTo(0,0);
 }
 
 function renderRdvView(){
@@ -1020,7 +1169,7 @@ function renderRdvView(){
     .filter(x => x.d && !isNaN(x.d.getTime()) && x.d >= now)
     .sort((a,b) => a.d - b.d);
 
-  const badge = $('rdvCountBadge');
+  const badge = $('navRdvBadge');
   if(upcoming.length){ badge.style.display = 'inline-flex'; badge.textContent = upcoming.length; }
   else { badge.style.display = 'none'; }
 
@@ -1364,36 +1513,41 @@ function setupClaimsBroadcast(){
 
 function renderPendingClaims(){
   const badge = $('pendingClaimsBadge');
+  const navBadge = $('navClaimsBadge');
   if(pendingClaims.length){
     badge.style.display = 'flex';
     $('pendingClaimsCount').textContent = pendingClaims.length;
+    navBadge.style.display = 'inline-flex';
+    navBadge.textContent = pendingClaims.length;
   } else {
     badge.style.display = 'none';
+    navBadge.style.display = 'none';
   }
 
-  const list = $('pendingClaimsList');
-  if(!pendingClaims.length){
-    list.innerHTML = '<p class="hint" style="color:var(--muted); text-align:center; padding:24px 0;">Aucun rendez-vous en attente pour le moment.</p>';
-    return;
-  }
-  list.innerHTML = pendingClaims.map(p=>{
-    const dt = p.dateRdv ? new Date(p.dateRdv) : null;
-    const dateStr = dt ? dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) : 'Date non précisée';
-    const timeStr = dt ? ('à ' + dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })) : '';
-    const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
-    const coord = [p.telephone, p.email].filter(Boolean).join(' · ');
-    return `
-    <div class="pending-claim-item">
-      <div>
-        <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
-        <span class="badge ${domaineBadgeClass}" style="margin-left:6px;">${p.domaine}</span>
-        ${p.societe ? `<div class="pc-meta">${escapeHtml(p.societe)}</div>` : ''}
-        ${coord ? `<div class="pc-meta">${escapeHtml(coord)}</div>` : ''}
-        <div class="pc-date">${dateStr} ${timeStr}</div>
-      </div>
-      <button class="btn-sm primary" onclick="claimProspect('${p.id}')">Je le prends</button>
-    </div>`;
-  }).join('');
+  const html = !pendingClaims.length
+    ? '<p style="color:var(--muted); text-align:center; padding:24px 0;">Aucun rendez-vous en attente pour le moment.</p>'
+    : pendingClaims.map(p=>{
+        const dt = p.dateRdv ? new Date(p.dateRdv) : null;
+        const dateStr = dt ? dt.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' }) : 'Date non précisée';
+        const timeStr = dt ? ('à ' + dt.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })) : '';
+        const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
+        const coord = [p.telephone, p.email].filter(Boolean).join(' · ');
+        return `
+        <div class="pending-claim-item">
+          <div>
+            <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
+            <span class="badge ${domaineBadgeClass}" style="margin-left:6px;">${p.domaine}</span>
+            ${p.societe ? `<div class="pc-meta">${escapeHtml(p.societe)}</div>` : ''}
+            ${coord ? `<div class="pc-meta">${escapeHtml(coord)}</div>` : ''}
+            <div class="pc-date">${dateStr} ${timeStr}</div>
+          </div>
+          <button class="btn-sm primary" onclick="claimProspect('${p.id}')">Je le prends</button>
+        </div>`;
+      }).join('');
+
+  $('pendingClaimsList').innerHTML = html;
+  const pageList = $('pendingClaimsPageList');
+  if(pageList) pageList.innerHTML = html;
 }
 
 function openPendingClaimsModal(){
@@ -1652,18 +1806,83 @@ function renderStats(){
   const today = new Date().toISOString().slice(0,10);
   const relancesToday = scoped.filter(p=>p.prochaineRelance && p.prochaineRelance <= today && p.statut!=='Client' && p.statut!=='Pas intéressé').length;
 
-  const cgp = computeDomaineCA('CGP');
-  const solaire = computeDomaineCA('Solaire');
-
   $('statsRow').innerHTML = `
     <div class="stat-card"><div class="num">${total}</div><div class="label">Prospects (${currentDomaineTab})</div></div>
     <div class="stat-card"><div class="num">${aRelancer}</div><div class="label">À relancer</div></div>
     <div class="stat-card"><div class="num">${rdvPris}</div><div class="label">RDV pris</div></div>
     <div class="stat-card"><div class="num">${clients}</div><div class="label">Clients</div></div>
     <div class="stat-card"><div class="num">${relancesToday}</div><div class="label">Relances en retard / dues</div></div>
+  `;
+}
+
+function renderDashboard(){
+  const total = prospects.length;
+  const aRelancer = prospects.filter(p=>p.statut==='À relancer').length;
+  const rdvPris = prospects.filter(p=>p.statut==='RDV pris').length;
+  const clients = prospects.filter(p=>p.statut==='Client').length;
+  const today = new Date().toISOString().slice(0,10);
+  const relancesToday = prospects.filter(p=>p.prochaineRelance && p.prochaineRelance <= today && p.statut!=='Client' && p.statut!=='Pas intéressé').length;
+  const cgp = computeDomaineCA('CGP');
+  const solaire = computeDomaineCA('Solaire');
+
+  const el = $('dashboardStatsRow');
+  if(!el) return;
+  el.innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="label">Prospects au total</div></div>
+    <div class="stat-card"><div class="num">${aRelancer}</div><div class="label">À relancer</div></div>
+    <div class="stat-card"><div class="num">${rdvPris}</div><div class="label">RDV pris</div></div>
+    <div class="stat-card"><div class="num">${clients}</div><div class="label">Clients</div></div>
+    <div class="stat-card"><div class="num">${relancesToday}</div><div class="label">Relances en retard / dues</div></div>
+    <div class="stat-card"><div class="num">${pendingClaims.length}</div><div class="label">RDV à attribuer</div></div>
+    <div class="stat-card cgp-accent"><div class="num">${formatEuro(cgp.ca + solaire.ca)}</div><div class="label">CA généré (total)</div><div class="subval">CGP ${formatEuro(cgp.ca)} · Solaire ${formatEuro(solaire.ca)}</div></div>
+  `;
+}
+
+function renderSalesStats(){
+  const cgp = computeDomaineCA('CGP');
+  const solaire = computeDomaineCA('Solaire');
+  const el = $('salesStatsRow');
+  if(!el) return;
+  el.innerHTML = `
     <div class="stat-card cgp-accent"><div class="num">${formatEuro(cgp.ca)}</div><div class="label">CA généré — CGP</div><div class="subval">${cgp.nbClients} client(s) · panier moyen ${formatEuro(cgp.panierMoyen)}</div></div>
     <div class="stat-card solar-accent"><div class="num">${formatEuro(solaire.ca)}</div><div class="label">CA généré — Solaire</div><div class="subval">${solaire.nbClients} client(s) · panier moyen ${formatEuro(solaire.panierMoyen)}</div></div>
+    <div class="stat-card"><div class="num">${formatEuro(cgp.ca + solaire.ca)}</div><div class="label">CA total</div></div>
   `;
+}
+
+function renderKanban(){
+  const board = $('kanbanBoard');
+  if(!board) return;
+  board.innerHTML = STATUTS.map(statut=>{
+    const items = prospects.filter(p=>p.statut===statut);
+    const cardsHtml = items.length
+      ? items.map(p=>`
+        <div class="kanban-card" onclick="openProspectModal('${p.id}')">
+          <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
+          <div class="kc-meta">${escapeHtml(p.societe || p.domaine)}${p.budget!=null ? ' · ' + formatEuro(p.budget) : ''}</div>
+        </div>`).join('')
+      : '<div class="kanban-empty">Aucun</div>';
+    return `
+      <div class="kanban-col">
+        <div class="kanban-col-header"><span>${escapeHtml(statut)}</span><span class="kanban-count-badge">${items.length}</span></div>
+        <div class="kanban-col-body">${cardsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderAssocieList(){
+  const el = $('associeList');
+  if(!el) return;
+  el.innerHTML = ASSOCIES.map(a=>{
+    const isMe = session && a.userId === session.user.id;
+    return `
+    <div class="associe-card">
+      <div>
+        <div class="assoc-name">${escapeHtml(a.name)}${isMe ? ' <span style="color:var(--muted); font-weight:400; font-size:12px;">(vous)</span>' : ''}</div>
+        <div class="assoc-meta">Chaque associé ne voit que ses propres prospects dans son CRM — utilisez ↔️ sur une fiche pour lui en transférer un.</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ============================================================
@@ -1792,6 +2011,10 @@ function renderAll(){
   renderStats();
   renderTable();
   renderRdvView();
+  renderDashboard();
+  renderSalesStats();
+  renderKanban();
+  renderAssocieList();
 }
 
 ['searchInput'].forEach(id=>$(id).addEventListener('input', renderTable));
