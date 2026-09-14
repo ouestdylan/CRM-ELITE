@@ -27,6 +27,15 @@
     font-family: 'Iowan Old Style','Georgia',serif;
   }
   *{box-sizing:border-box;}
+
+  /* Barres de défilement en blanc, partout où un contenu peut défiler */
+  *{ scrollbar-color:#fff transparent; scrollbar-width:thin; }
+  ::-webkit-scrollbar{ height:10px; width:10px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{
+    background:#fff; border-radius:10px; border:1px solid var(--line); background-clip:padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover{ background:#f6f4ef; }
   body{
     margin:0;
     background:var(--paper);
@@ -380,31 +389,36 @@
   .pending-claim-item .pc-meta{color:var(--muted); font-size:12.5px; margin-top:2px;}
 
   /* ---------- Page Ventes : pipeline Kanban ---------- */
-  .kanban-board{display:flex; gap:14px; overflow-x:auto; padding-bottom:12px;}
+  .kanban-board{display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px;}
   .kanban-col{
-    flex:0 0 232px; background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-    display:flex; flex-direction:column; max-height:640px;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    display:flex; flex-direction:column; max-height:520px; min-width:0;
   }
   .kanban-col-header{
-    padding:12px 14px; border-bottom:1px solid var(--line); font-size:12px; font-weight:700;
-    display:flex; justify-content:space-between; align-items:center; text-transform:uppercase; letter-spacing:.03em;
-    color:var(--muted);
+    padding:11px 12px; border-bottom:1px solid var(--line); font-size:11px; font-weight:700;
+    display:flex; justify-content:space-between; align-items:center; gap:6px;
+    text-transform:uppercase; letter-spacing:.02em; color:var(--muted);
   }
-  .kanban-count-badge{background:#eef0f4; color:#4a5568; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:700;}
-  .kanban-col-body{padding:10px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;}
+  .kanban-col-header span:first-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .kanban-count-badge{flex:0 0 auto; background:#eef0f4; color:#4a5568; border-radius:20px; padding:1px 8px; font-size:11px; font-weight:700;}
+  .kanban-col-body{padding:9px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:7px;}
   .kanban-card{
-    background:#fbfaf7; border:1px solid var(--line); border-radius:8px; padding:9px 11px; font-size:12.5px; cursor:pointer;
+    background:#fbfaf7; border:1px solid var(--line); border-radius:8px; padding:8px 9px; font-size:12px; cursor:pointer;
   }
   .kanban-card:hover{border-color:var(--gold);}
-  .kanban-card strong{display:block; font-size:12.5px;}
-  .kanban-card .kc-meta{color:var(--muted); font-size:11px; margin-top:2px;}
+  .kanban-card strong{display:block; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .kanban-card .kc-meta{color:var(--muted); font-size:10.5px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .kanban-empty{padding:20px 10px; text-align:center; color:var(--muted); font-size:12px;}
 
   /* ---------- Page Équipe ---------- */
   .associe-list{display:flex; flex-direction:column; gap:10px; margin-bottom:26px;}
   .associe-card{
-    display:flex; align-items:center; justify-content:space-between; background:var(--card);
-    border:1px solid var(--line); border-radius:var(--radius); padding:15px 18px;
+    display:flex; align-items:center; gap:14px; background:var(--card);
+    border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px;
+  }
+  .assoc-photo{
+    width:52px; height:52px; border-radius:50%; object-fit:cover; flex:0 0 auto;
+    border:2px solid var(--gold-soft);
   }
   .associe-card .assoc-name{font-weight:700; font-size:14px;}
   .associe-card .assoc-meta{color:var(--muted); font-size:12px; margin-top:2px;}
@@ -813,9 +827,9 @@ const BOOKING_PAGE_URL = 'https://contact-elite.vercel.app';
 // Supabase de son compte (Authentication → Users → colonne UID).
 // Cette même liste doit être recopiée à l'identique dans rdv.html / index.html.
 const ASSOCIES = [
-  { key: 'dylan',   name: 'Dylan',   userId: 'ec338b51-6d1e-4954-aef2-e39dfeb552b2' },
-  { key: 'ruben',   name: 'Ruben',   userId: 'cf144b42-da03-4181-b687-8abdd32632d8' },
-  { key: 'vincent', name: 'Vincent', userId: '369568bc-e686-48f1-9c19-b40245190b88' }
+  { key: 'dylan',   name: 'Dylan',   userId: 'ec338b51-6d1e-4954-aef2-e39dfeb552b2', photo: 'photo-dylan.jpg' },
+  { key: 'ruben',   name: 'Ruben',   userId: 'cf144b42-da03-4181-b687-8abdd32632d8', photo: 'photo-ruben.jpg' },
+  { key: 'vincent', name: 'Vincent', userId: '369568bc-e686-48f1-9c19-b40245190b88', photo: 'photo-vincent.jpg' }
 ];
 
 const { createClient } = supabase;
@@ -1877,7 +1891,8 @@ function renderAssocieList(){
     const isMe = session && a.userId === session.user.id;
     return `
     <div class="associe-card">
-      <div>
+      <img class="assoc-photo" src="${escapeHtml(a.photo)}" alt="${escapeHtml(a.name)}">
+      <div style="flex:1;">
         <div class="assoc-name">${escapeHtml(a.name)}${isMe ? ' <span style="color:var(--muted); font-weight:400; font-size:12px;">(vous)</span>' : ''}</div>
         <div class="assoc-meta">Chaque associé ne voit que ses propres prospects dans son CRM — utilisez ↔️ sur une fiche pour lui en transférer un.</div>
       </div>
