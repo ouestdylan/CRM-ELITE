@@ -266,6 +266,53 @@
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     overflow-x:auto;
   }
+
+  /* ---------- Liste des prospects : une fiche par prospect ---------- */
+  .list-toolbar{
+    display:flex; align-items:center; gap:16px; padding:12px 20px; border-bottom:1px solid var(--line);
+    font-size:13px; flex-wrap:wrap;
+  }
+  .list-select-all{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); cursor:pointer;}
+  .list-select-all input{width:auto;}
+  #sortFieldSelect{
+    border:1px solid var(--line); border-radius:6px; padding:5px 8px; font-size:12.5px; background:#fff; color:var(--ink);
+  }
+  .prospect-list{display:flex; flex-direction:column;}
+  .prospect-card{
+    display:flex; align-items:flex-start; gap:16px; padding:20px; border-bottom:1px solid var(--line);
+    cursor:pointer; transition:background .12s;
+  }
+  .prospect-card:last-child{border-bottom:none;}
+  .prospect-card:hover{background:#fafbfc;}
+  .prospect-card.row-selected{background:var(--red-soft);}
+  .pc-check{margin-top:5px; flex:0 0 auto; width:16px; height:16px;}
+  .pc-avatar{
+    width:48px; height:48px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:700; font-size:15px; margin-top:1px;
+  }
+  .pc-main{flex:1; min-width:0;}
+  .pc-top{display:flex; align-items:center; gap:9px; flex-wrap:wrap;}
+  .pc-name{font-size:17px; font-weight:700; color:var(--ink);}
+  .pc-sub{color:var(--muted); font-size:13.5px; margin-top:3px;}
+  .pc-pills{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .pc-pill{display:inline-flex; align-items:center; padding:5px 13px; border-radius:20px; font-size:12px; font-weight:700;}
+  .priorite-pill-Haute{background:var(--red-soft); color:var(--red);}
+  .priorite-pill-Moyenne{background:var(--gold-soft); color:var(--gold);}
+  .priorite-pill-Basse{background:#eef0f4; color:#4a5568;}
+  .pc-info-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px 22px; margin-top:16px;
+  }
+  .pc-info-item label{
+    display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;
+    font-weight:700; margin-bottom:3px;
+  }
+  .pc-info-item .pc-val{font-size:14px; color:var(--ink); display:flex; align-items:center; gap:6px;}
+  a.pc-val{color:var(--ink); text-decoration:none;}
+  a.pc-val:hover{color:var(--gold);}
+  .pc-produits{margin-top:14px; display:flex; flex-wrap:wrap; gap:6px;}
+  .pc-produit-tag{background:#eef1f5; color:#3a4a63; font-size:11px; padding:3px 9px; border-radius:6px;}
+  .pc-actions{display:flex; flex-direction:column; gap:6px; flex:0 0 auto;}
+
   table{width:100%; border-collapse:collapse; font-size:12.5px; table-layout:auto;}
   thead th{
     text-align:left; padding:9px 8px; background:var(--ink); color:#fff;
@@ -595,25 +642,27 @@
         </section>
 
         <section class="table-wrap" id="listeWrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:34px;"><input type="checkbox" id="selectAllCheckbox" title="Tout sélectionner"></th>
-                <th data-sort="nom">Contact</th>
-                <th data-sort="societe">Société / Adresse</th>
-                <th>Téléphone</th>
-                <th>Email</th>
-                <th data-sort="domaine">Domaine</th>
-                <th data-sort="statut">Statut</th>
-                <th data-sort="priorite">Priorité</th>
-                <th data-sort="date_rdv">RDV / Relance</th>
-                <th data-sort="budget">Budget</th>
-<th>Produits</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="prospectsBody"></tbody>
-          </table>
+          <div class="list-toolbar">
+            <label class="list-select-all">
+              <input type="checkbox" id="selectAllCheckbox" title="Tout sélectionner"> Tout sélectionner
+            </label>
+            <div class="toolbar-spacer"></div>
+            <label style="font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:7px;">
+              Trier par
+              <select id="sortFieldSelect">
+                <option value="created_at">Date d'ajout</option>
+                <option value="nom">Nom</option>
+                <option value="societe">Société</option>
+                <option value="domaine">Domaine</option>
+                <option value="statut">Statut</option>
+                <option value="priorite">Priorité</option>
+                <option value="budget">Budget</option>
+                <option value="date_rdv">Date RDV</option>
+              </select>
+            </label>
+            <button class="icon-btn" id="sortDirBtn" title="Inverser l'ordre">↓</button>
+          </div>
+          <div id="prospectsBody" class="prospect-list"></div>
           <div class="empty-state" id="emptyState" style="display:none;">Aucun prospect ne correspond à ces critères.</div>
         </section>
       </div>
@@ -1379,9 +1428,9 @@ let selectedIds = new Set();
 function toggleRowSelection(id, checked){
   if(checked) selectedIds.add(id); else selectedIds.delete(id);
   updateBulkActionsBar();
-  // Coche/décoche juste la ligne concernée, sans tout redessiner (évite de perdre le focus)
-  const row = document.querySelector(`.row-select-checkbox[data-id="${id}"]`)?.closest('tr');
-  if(row) row.classList.toggle('row-selected', checked);
+  // Coche/décoche juste la fiche concernée, sans tout redessiner (évite de perdre le focus)
+  const card = document.querySelector(`.row-select-checkbox[data-id="${id}"]`)?.closest('.prospect-card');
+  if(card) card.classList.toggle('row-selected', checked);
   syncSelectAllCheckbox();
 }
 
@@ -2046,18 +2095,22 @@ function toCamel(field){
   return map[field] || field;
 }
 
-document.querySelectorAll('thead th[data-sort]').forEach(th=>{
-  th.addEventListener('click', ()=>{
-    const field = th.dataset.sort;
-    if(sortState.field === field){
-      sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
-    } else {
-      sortState = { field, dir: 'asc' };
-    }
-    saveUiPref('sort', sortState);
-    renderTable();
-  });
+$('sortFieldSelect').addEventListener('change', (e)=>{
+  sortState.field = e.target.value;
+  saveUiPref('sort', sortState);
+  renderTable();
 });
+$('sortDirBtn').addEventListener('click', ()=>{
+  sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  $('sortDirBtn').textContent = sortState.dir === 'asc' ? '↑' : '↓';
+  saveUiPref('sort', sortState);
+  renderTable();
+});
+(function initSortControls(){
+  const fieldToOption = { created_at:'created_at', nom:'nom', societe:'societe', domaine:'domaine', statut:'statut', priorite:'priorite', budget:'budget', date_rdv:'date_rdv' };
+  $('sortFieldSelect').value = fieldToOption[sortState.field] || 'created_at';
+  $('sortDirBtn').textContent = sortState.dir === 'asc' ? '↑' : '↓';
+})();
 
 function renderTable(){
   const list = getFilteredSorted();
@@ -2066,63 +2119,69 @@ function renderTable(){
 
   body.innerHTML = list.map(p=>{
     const produitsCount = (p.produits||[]).length;
-    const produitsTitle = produitsCount ? escapeHtml((p.produits||[]).join(', ')) : '';
     const domaineBadgeClass = p.domaine === 'Solaire' ? 'badge-domaine-solaire' : 'badge-domaine-cgp';
     const isChecked = selectedIds.has(p.id);
+    const initials = (((p.prenom||'').trim()[0]||'') + ((p.nom||'').trim()[0]||'')).toUpperCase() || '?';
+    const avatarBg = p.domaine === 'Solaire' ? 'var(--solar)' : 'var(--gold)';
+    const societeVille = [p.societe, [p.adresse, [p.codePostal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · ')].filter(Boolean).join(' — ');
+
+    let rdvRelanceVal = '—';
+    if(p.dateRdv){
+      const d = new Date(p.dateRdv);
+      rdvRelanceVal = 'RDV ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) + ' à ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    } else if(p.prochaineRelance){
+      rdvRelanceVal = 'Relance ' + new Date(p.prochaineRelance).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+    }
+
+    const produitsHtml = produitsCount
+      ? `<div class="pc-produits">${(p.produits||[]).slice(0,4).map(pr=>`<span class="pc-produit-tag">${escapeHtml(pr)}</span>`).join('')}${produitsCount>4?`<span class="pc-produit-tag">+${produitsCount-4}</span>`:''}</div>`
+      : '';
+
     return `
-    <tr class="${isChecked ? 'row-selected' : ''}">
-      <td><input type="checkbox" class="row-select-checkbox" data-id="${p.id}" ${isChecked ? 'checked' : ''} onchange="toggleRowSelection('${p.id}', this.checked)"></td>
-      <td class="name-cell">
-        <strong>${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</strong>
-        ${p.typeCabinet ? `<span class="type-tag" title="Type">${escapeHtml(p.typeCabinet)}</span>` : ''}
-      </td>
-      <td>
-        <div>${escapeHtml(p.societe||'—')}</div>
-        <span style="color:var(--muted); font-size:12px;">${escapeHtml([p.adresse, [p.codePostal, p.ville].filter(Boolean).join(' ')].filter(Boolean).join(' · '))}</span>
-      </td>
-      <td>${p.telephone ? `<a class="tel-link" href="tel:${escapeHtml(p.telephone)}" onclick="onCallClick('${p.id}')">${escapeHtml(p.telephone)}</a>` : '—'}</td>
-      <td>
-        <div class="email-cell">
-          <span class="email-text" title="${escapeHtml(p.email||'')}">${p.email ? escapeHtml(p.email) : '<span style="color:var(--muted);">—</span>'}</span>
-          ${p.email ? `<button type="button" class="icon-btn" onclick="onEmailClick('${p.id}')" title="Proposer un RDV sur Google Agenda">📅</button>` : ''}
+    <div class="prospect-card ${isChecked ? 'row-selected' : ''}" onclick="openProspectModal('${p.id}')">
+      <input type="checkbox" class="pc-check row-select-checkbox" data-id="${p.id}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation()" onchange="toggleRowSelection('${p.id}', this.checked)">
+      <div class="pc-avatar" style="background:${avatarBg};">${initials}</div>
+      <div class="pc-main">
+        <div class="pc-top">
+          <span class="pc-name">${escapeHtml(p.prenom)} ${escapeHtml(p.nom)}</span>
+          <span class="badge ${domaineBadgeClass}">${p.domaine}</span>
+          ${p.typeCabinet ? `<span class="type-tag">${escapeHtml(p.typeCabinet)}</span>` : ''}
         </div>
-      </td>
-      <td><span class="badge ${domaineBadgeClass}">${p.domaine}</span></td>
-      <td>
-        <select class="inline-select" onchange="quickUpdate('${p.id}','statut',this.value)">
-          ${STATUTS.map(s=>`<option value="${s}" ${s===p.statut?'selected':''}>${s}</option>`).join('')}
-        </select>
-      </td>
-      <td>
-        <select class="inline-select" onchange="quickUpdate('${p.id}','priorite',this.value)">
-          <option value="Haute" ${p.priorite==='Haute'?'selected':''}>Haute</option>
-          <option value="Moyenne" ${p.priorite==='Moyenne'?'selected':''}>Moyenne</option>
-          <option value="Basse" ${p.priorite==='Basse'?'selected':''}>Basse</option>
-        </select>
-      </td>
-      <td class="rdv-relance-cell">
-        <div class="field-clear compact">
-          <span class="mini-label" title="Date &amp; heure du RDV">RDV</span>
-          <input type="datetime-local" class="inline-select" value="${isoToLocalInput(p.dateRdv)}" onchange="onDateRdvChange('${p.id}', this.value)">
-          ${p.dateRdv ? `<button type="button" class="clear-btn" onclick="onDateRdvChange('${p.id}', '')" title="Effacer le RDV">✕</button>` : ''}
+        ${societeVille ? `<div class="pc-sub">${escapeHtml(societeVille)}</div>` : ''}
+        <div class="pc-pills">
+          <span class="pc-pill ${STATUT_CLASS[p.statut] || 'badge-status-1'}">${escapeHtml(p.statut)}</span>
+          <span class="pc-pill priorite-pill-${p.priorite}">${p.priorite === 'Basse' ? 'Faible' : p.priorite}</span>
         </div>
-        <div class="field-clear compact">
-          <span class="mini-label" title="Prochaine relance">Rel.</span>
-          <input type="date" class="inline-select" value="${p.prochaineRelance||''}" onchange="quickUpdate('${p.id}','prochaineRelance',this.value)">
-          ${p.prochaineRelance ? `<button type="button" class="clear-btn" onclick="quickUpdate('${p.id}','prochaineRelance', null)" title="Effacer la relance">✕</button>` : ''}
+        <div class="pc-info-grid">
+          <div class="pc-info-item">
+            <label>Téléphone</label>
+            <div class="pc-val">${p.telephone ? `<a class="pc-val" href="tel:${escapeHtml(p.telephone)}" onclick="event.stopPropagation(); onCallClick('${p.id}')">${escapeHtml(p.telephone)}</a>` : '—'}</div>
+          </div>
+          <div class="pc-info-item">
+            <label>Email</label>
+            <div class="pc-val">
+              ${p.email ? `<span title="${escapeHtml(p.email)}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px;">${escapeHtml(p.email)}</span>` : '—'}
+              ${p.email ? `<button type="button" class="icon-btn" onclick="event.stopPropagation(); onEmailClick('${p.id}')" title="Proposer un RDV sur Google Agenda">📅</button>` : ''}
+            </div>
+          </div>
+          <div class="pc-info-item">
+            <label>Budget</label>
+            <div class="pc-val">${p.budget != null ? formatEuro(p.budget) : '—'}</div>
+          </div>
+          <div class="pc-info-item">
+            <label>RDV / Relance</label>
+            <div class="pc-val">${escapeHtml(rdvRelanceVal)}</div>
+          </div>
         </div>
-      </td>
-      <td>${p.budget != null ? formatEuro(p.budget) : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-<td>${produitsCount ? `<span class="badge badge-status-1" title="${produitsTitle}">${produitsCount} produit${produitsCount>1?'s':''}</span>` : '<span style="color:var(--muted); font-size:12px;">—</span>'}</td>
-      <td>
-        <div class="row-actions">
-          <button class="icon-btn" onclick="copyBookingLink('${p.id}')" title="Copier le lien de prise de RDV">🔗</button>
-          <button class="icon-btn" onclick="openReassignModal('${p.id}')" title="Réassigner à un autre associé">↔️</button>
-          <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
-          <button class="icon-btn danger" onclick="deleteProspect('${p.id}')" title="Supprimer">🗑</button>
-        </div>
-      </td>
-    </tr>`;
+        ${produitsHtml}
+      </div>
+      <div class="pc-actions" onclick="event.stopPropagation()">
+        <button class="icon-btn" onclick="copyBookingLink('${p.id}')" title="Copier le lien de prise de RDV">🔗</button>
+        <button class="icon-btn" onclick="openReassignModal('${p.id}')" title="Réassigner à un autre associé">↔️</button>
+        <button class="icon-btn" onclick="openProspectModal('${p.id}')" title="Modifier">✎</button>
+        <button class="icon-btn danger" onclick="deleteProspect('${p.id}')" title="Supprimer">🗑</button>
+      </div>
+    </div>`;
   }).join('');
   syncSelectAllCheckbox();
 }
