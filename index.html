@@ -9,9 +9,9 @@
   :root{
     --ink:#0f1e33;
     --ink-soft:#1c3252;
-    --paper:#0f1e33;
+    --paper:#f5f6f8;
     --card:#ffffff;
-    --line:#e2ddd0;
+    --line:#e4e6ea;
     --gold:#a9823f;
     --gold-soft:#f1e6cf;
     --solar:#c9781f;
@@ -22,20 +22,20 @@
     --red-soft:#f6e6e6;
     --amber:#a9762f;
     --amber-soft:#f3ecd9;
-    --muted:#6b6459;
+    --muted:#6b7280;
     --radius:10px;
     font-family: 'Iowan Old Style','Georgia',serif;
   }
   *{box-sizing:border-box;}
 
-  /* Barres de défilement en blanc, partout où un contenu peut défiler */
-  *{ scrollbar-color:#fff transparent; scrollbar-width:thin; }
+  /* Barres de défilement discrètes, adaptées au thème clair */
+  *{ scrollbar-color:#c7cbd1 transparent; scrollbar-width:thin; }
   ::-webkit-scrollbar{ height:10px; width:10px; }
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{
-    background:#fff; border-radius:10px; border:1px solid var(--line); background-clip:padding-box;
+    background:#c7cbd1; border-radius:10px; background-clip:padding-box;
   }
-  ::-webkit-scrollbar-thumb:hover{ background:#f6f4ef; }
+  ::-webkit-scrollbar-thumb:hover{ background:#a8adb5; }
   body{
     margin:0;
     background:var(--paper);
@@ -54,21 +54,21 @@
   }
   .spinner{
     width:34px; height:34px; border-radius:50%;
-    border:3px solid rgba(255,255,255,.25); border-top-color:var(--gold);
+    border:3px solid var(--line); border-top-color:var(--gold);
     animation:spin .8s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg);}}
-  #loadingScreen p{color:#c3cbdb; font-size:14px;}
+  #loadingScreen p{color:var(--muted); font-size:14px;}
 
   /* ---------- LOGIN ---------- */
   #loginScreen{
     position:fixed; inset:0; display:none; align-items:center; justify-content:center;
-    background: radial-gradient(circle at 20% 20%, #16294a, var(--ink) 60%);
+    background: radial-gradient(circle at 20% 20%, #fdfbf6, #eef0f4 70%);
     z-index:998;
   }
   .login-box{
     background:var(--card); width:100%; max-width:380px; padding:40px 36px;
-    border-radius:var(--radius); box-shadow:0 30px 60px rgba(0,0,0,.35);
+    border-radius:var(--radius); box-shadow:0 30px 60px rgba(15,30,51,.12); border:1px solid var(--line);
   }
   .login-box .brand{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
   .brand-mark{
@@ -102,59 +102,58 @@
   /* ---------- APP SHELL ---------- */
   #app{display:none;}
   header.topbar{
-    background:var(--ink); color:#fff; padding:14px 26px;
+    background:#fff; color:var(--ink); padding:14px 26px;
     display:flex; align-items:center; justify-content:space-between; gap:16px;
-    position:sticky; top:0; z-index:50;
+    position:sticky; top:0; z-index:50; border-bottom:1px solid var(--line);
   }
   .topbar-left{display:flex; align-items:center; gap:12px;}
-  .topbar h1{font-size:17px; color:#fff;}
-  .topbar .sub{font-size:12px; color:#b9c2d1;}
+  .topbar h1{font-size:17px; color:var(--ink);}
+  .topbar .sub{font-size:12px; color:var(--muted);}
   .topbar-right{display:flex; align-items:center; gap:14px;}
   #saveIndicator{
     font-size:12px; padding:6px 12px; border-radius:20px; display:flex; align-items:center; gap:6px;
-    background:rgba(255,255,255,.08); color:#cfd8e6;
+    background:#f2f3f5; color:var(--muted);
   }
-  #saveIndicator .dot{width:7px; height:7px; border-radius:50%; background:#8fa3c2;}
+  #saveIndicator .dot{width:7px; height:7px; border-radius:50%; background:#9aa3af;}
   #saveIndicator.state-saving .dot{background:var(--gold); animation:pulse 1s infinite;}
   #saveIndicator.state-saved .dot{background:#5fbd85;}
-  #saveIndicator.state-error{background:rgba(161,61,61,.25); color:#f5c9c9;}
-  #saveIndicator.state-error .dot{background:#e07373;}
+  #saveIndicator.state-error{background:var(--red-soft); color:var(--red);}
+  #saveIndicator.state-error .dot{background:var(--red);}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
   .logout-btn{
-    background:transparent; border:1px solid rgba(255,255,255,.25); color:#fff;
+    background:transparent; border:1px solid var(--line); color:var(--ink);
     padding:8px 14px; border-radius:8px; font-size:13px;
   }
-  .logout-btn:hover{background:rgba(255,255,255,.1);}
+  .logout-btn:hover{background:#f2f3f5;}
 
   /* ---------- STRUCTURE GÉNÉRALE : sidebar + pages ---------- */
   #app{display:none; min-height:100vh;}
   .app-shell{display:flex; min-height:100vh;}
   .sidebar{
-    width:226px; flex:0 0 226px; background:var(--ink); color:#fff;
+    width:226px; flex:0 0 226px; background:#fff; color:var(--ink);
     display:flex; flex-direction:column; padding:18px 0 24px; position:sticky; top:0;
-    height:100vh; overflow-y:auto;
+    height:100vh; overflow-y:auto; border-right:1px solid var(--line);
   }
   .sidebar-brand{
     display:flex; align-items:center; gap:10px; padding:0 18px 18px;
-    border-bottom:1px solid rgba(255,255,255,.12); margin-bottom:14px;
+    border-bottom:1px solid var(--line); margin-bottom:14px;
   }
   .sidebar-brand .brand-mark{width:30px; height:30px;}
-  .sidebar-brand .brand-name{font-size:13.5px; font-weight:700; line-height:1.25;}
-  .sidebar-brand .brand-name span{display:block; font-size:10.5px; font-weight:400; color:#9aa6bd; margin-top:1px;}
+  .sidebar-brand .brand-name{font-size:13.5px; font-weight:700; line-height:1.25; color:var(--ink);}
+  .sidebar-brand .brand-name span{display:block; font-size:10.5px; font-weight:400; color:var(--muted); margin-top:1px;}
   .sidebar-nav{display:flex; flex-direction:column; gap:2px; padding:0 10px;}
   .sidebar-nav-item{
-    display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:8px;
-    color:#c3cbdb; font-size:13px; font-weight:600; cursor:pointer; border:none; background:none;
-    text-align:left; width:100%; font-family:inherit;
+    display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:8px;
+    color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; border:none; background:none;
+    text-align:left; width:100%; font-family:inherit; border-left:3px solid transparent;
   }
-  .sidebar-nav-item:hover{background:rgba(255,255,255,.07); color:#fff;}
-  .sidebar-nav-item.active{background:var(--red); color:#fff;}
+  .sidebar-nav-item:hover{background:#f2f3f5; color:var(--ink);}
+  .sidebar-nav-item.active{background:var(--red-soft); color:var(--red); border-left-color:var(--red);}
   .sidebar-nav-item .snav-icon{font-size:15px; width:18px; text-align:center; flex:0 0 auto;}
   .sidebar-nav-item .snav-badge{
-    margin-left:auto; background:rgba(255,255,255,.18); color:#fff; border-radius:20px;
+    margin-left:auto; background:var(--red); color:#fff; border-radius:20px;
     padding:1px 7px; font-size:10.5px; font-weight:700;
   }
-  .sidebar-nav-item.active .snav-badge{background:rgba(255,255,255,.3);}
   .app-main{flex:1; min-width:0; display:flex; flex-direction:column;}
   .page{display:none;}
   .page.active{display:block;}
@@ -184,8 +183,8 @@
     display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between;
     gap:14px; margin-bottom:18px;
   }
-  .section-header .titles h2{font-size:21px; color:#fff;}
-  .section-header .titles p{color:#b9c2d1; font-size:13px; margin-top:4px;}
+  .section-header .titles h2{font-size:21px; color:var(--ink);}
+  .section-header .titles p{color:var(--muted); font-size:13px; margin-top:4px;}
   .tabs{display:flex; gap:8px;}
   .tab-btn{
     padding:9px 16px; border-radius:8px; border:1px solid var(--line); background:#fff;
@@ -340,28 +339,74 @@
     align-items:flex-start; justify-content:center; z-index:200; padding:40px 16px; overflow-y:auto;
   }
   .modal{
-    background:var(--card); border-radius:var(--radius); width:100%; max-width:640px;
-    padding:28px; box-shadow:0 30px 70px rgba(0,0,0,.3);
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius); width:100%; max-width:640px;
+    padding:28px; box-shadow:0 30px 70px rgba(15,30,51,.18);
   }
   .modal h2{font-size:18px; margin-bottom:4px;}
   .modal .modal-sub{color:var(--muted); font-size:13px; margin-bottom:20px;}
-  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 14px;}
-  .form-grid .full{grid-column:1/-1;}
-  .form-grid label{display:block; font-size:12px; color:var(--muted); margin-bottom:5px;}
-  .form-grid input, .form-grid select, .form-grid textarea{
-    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px; font-size:13.5px; background:#fbfaf7;
+
+  /* En-tête "fiche contact" (avatar + nom + dernière mise à jour) */
+  .modal-contact-header{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .mch-avatar{
+    width:52px; height:52px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:700; font-size:17px; background:var(--gold);
   }
-  .form-grid textarea{resize:vertical; min-height:70px;}
-  .domaine-toggle{display:flex; gap:8px;}
+  .modal-contact-header h2{font-size:19px; margin:0;}
+  .modal-contact-header .mch-meta{margin:2px 0 0; color:var(--muted); font-size:12.5px; display:flex; align-items:center; gap:6px;}
+  .mch-dot{width:6px; height:6px; border-radius:50%; background:#5fbd85; flex:0 0 auto;}
+
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 12px;}
+  .form-grid .full{grid-column:1/-1;}
+  .field-box{
+    background:#f7f8fa; border:1px solid var(--line); border-radius:9px; padding:8px 12px;
+  }
+  .field-box label{
+    display:block; font-size:10.5px; color:var(--muted); margin-bottom:2px;
+    text-transform:uppercase; letter-spacing:.03em; font-weight:700;
+  }
+  .field-box input, .field-box select, .field-box textarea{
+    width:100%; padding:0; border:none; background:transparent; font-size:13.5px; color:var(--ink); font-family:inherit;
+  }
+  .field-box input:focus, .field-box select:focus, .field-box textarea:focus{outline:none;}
+  .form-grid textarea{resize:vertical; min-height:60px;}
+
+  /* Section label ("Informations du contact") */
+  .modal-section-label{
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--muted);
+    margin:22px 0 10px; padding-top:16px; border-top:1px solid var(--line);
+  }
+  .modal-section-label:first-of-type{margin-top:0; padding-top:0; border-top:none;}
+
+  .domaine-toggle{display:flex; gap:8px; flex-wrap:wrap;}
   .domaine-radio{flex:1;}
   .domaine-radio input{position:absolute; opacity:0; width:0; height:0;}
   .domaine-radio label{
-    display:block; text-align:center; border:1px solid var(--line); border-radius:8px;
-    padding:9px 10px; font-size:13px; font-weight:600; color:var(--muted); background:#fff;
+    display:block; text-align:center; border:1px solid var(--line); border-radius:20px;
+    padding:8px 14px; font-size:12.5px; font-weight:700; color:var(--muted); background:#fff; cursor:pointer;
   }
   .domaine-radio input:checked + label{color:#fff; background:var(--ink); border-color:var(--ink);}
   .domaine-radio input[value="CGP"]:checked + label{background:var(--ink); border-color:var(--ink);}
   .domaine-radio input[value="Solaire"]:checked + label{background:var(--solar); border-color:var(--solar);}
+
+  /* Priorité : mêmes pastilles, colorées par niveau */
+  .priorite-toggle .domaine-radio{flex:0 0 auto; min-width:84px;}
+  .priorite-toggle input[value="Haute"]:checked + label{background:var(--red); border-color:var(--red);}
+  .priorite-toggle input[value="Moyenne"]:checked + label{background:var(--gold); border-color:var(--gold);}
+  .priorite-toggle input[value="Basse"]:checked + label{background:#8a8f98; border-color:#8a8f98;}
+
+  /* Statut : une pastille par statut, colorée comme les badges du tableau */
+  .statut-toggle{display:flex; flex-wrap:wrap; gap:7px;}
+  .statut-toggle .domaine-radio{flex:0 0 auto;}
+  .statut-toggle input[value="À appeler"]:checked + label{background:#4a5568; border-color:#4a5568;}
+  .statut-toggle input[value="Appelé"]:checked + label{background:#2c5282; border-color:#2c5282;}
+  .statut-toggle input[value="À relancer"]:checked + label{background:var(--amber); border-color:var(--amber);}
+  .statut-toggle input[value="Intéressé"]:checked + label{background:var(--green); border-color:var(--green);}
+  .statut-toggle input[value="RDV pris"]:checked + label{background:var(--gold); border-color:var(--gold);}
+  .statut-toggle input[value="En négociation"]:checked + label{background:#6b46a1; border-color:#6b46a1;}
+  .statut-toggle input[value="Client"]:checked + label{background:var(--green); border-color:var(--green);}
+  .statut-toggle input[value="Pas intéressé"]:checked + label{background:var(--red); border-color:var(--red);}
+  .statut-toggle input[value="Injoignable"]:checked + label{background:#888; border-color:#888;}
+
   .chip-group{display:flex; flex-wrap:wrap; gap:8px;}
   .chip-group.hidden{display:none;}
   .chip{
@@ -638,13 +683,22 @@
 <!-- MODAL PROSPECT -->
 <div class="modal-overlay" id="prospectModalOverlay">
   <div class="modal">
-    <h2 id="modalTitle">Nouveau prospect</h2>
-    <p class="modal-sub">Les informations du contact et le suivi commercial.</p>
+    <div class="modal-contact-header" id="modalContactHeader" style="display:none;">
+      <div class="mch-avatar" id="modalAvatar">?</div>
+      <div>
+        <h2 id="modalContactName">—</h2>
+        <p class="mch-meta"><span class="mch-dot"></span><span id="modalContactMeta"></span></p>
+      </div>
+    </div>
+    <div id="modalNewHeader">
+      <h2 id="modalTitle">Nouveau prospect</h2>
+      <p class="modal-sub">Les informations du contact et le suivi commercial.</p>
+    </div>
     <div class="form-error" id="formError"></div>
     <form id="prospectForm">
       <div class="form-grid">
         <div class="full">
-          <label>Domaine</label>
+          <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">Domaine</label>
           <div class="domaine-toggle">
             <div class="domaine-radio">
               <input type="radio" name="f_domaine" id="f_domaine_cgp" value="CGP" checked>
@@ -656,43 +710,57 @@
             </div>
           </div>
         </div>
-        <div><label>Prénom</label><input type="text" id="f_prenom"></div>
-        <div><label>Nom</label><input type="text" id="f_nom" required></div>
-        <div><label>Société</label><input type="text" id="f_societe"></div>
-        <div><label>Adresse</label><input type="text" id="f_adresse"></div>
-        <div><label>Code postal</label><input type="text" id="f_codePostal"></div>
-        <div><label>Ville</label><input type="text" id="f_ville"></div>
-        <div><label>Téléphone</label><input type="text" id="f_telephone"></div>
-        <div><label>Email</label><input type="email" id="f_email"></div>
-        <div><label>Site web</label><input type="text" id="f_siteweb"></div>
-<div><label>Budget envisagé (€)</label><input type="number" id="f_budget" min="0" step="500" placeholder="Ex: 50000"></div>
-        <div>
+
+        <div class="full">
+          <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">Statut</label>
+          <div class="domaine-toggle statut-toggle" id="statutToggle"></div>
+        </div>
+        <div class="full">
+          <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">Priorité</label>
+          <div class="domaine-toggle priorite-toggle">
+            <div class="domaine-radio">
+              <input type="radio" name="f_priorite_radio" id="f_priorite_basse" value="Basse">
+              <label for="f_priorite_basse">Faible</label>
+            </div>
+            <div class="domaine-radio">
+              <input type="radio" name="f_priorite_radio" id="f_priorite_moyenne" value="Moyenne" checked>
+              <label for="f_priorite_moyenne">Moyenne</label>
+            </div>
+            <div class="domaine-radio">
+              <input type="radio" name="f_priorite_radio" id="f_priorite_haute" value="Haute">
+              <label for="f_priorite_haute">Haute</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-section-label full">Informations du contact</div>
+        <div class="field-box"><label>Prénom</label><input type="text" id="f_prenom"></div>
+        <div class="field-box"><label>Nom</label><input type="text" id="f_nom" required></div>
+        <div class="field-box"><label>Société</label><input type="text" id="f_societe"></div>
+        <div class="field-box"><label>Adresse</label><input type="text" id="f_adresse"></div>
+        <div class="field-box"><label>Code postal</label><input type="text" id="f_codePostal"></div>
+        <div class="field-box"><label>Ville</label><input type="text" id="f_ville"></div>
+        <div class="field-box"><label>Téléphone</label><input type="text" id="f_telephone"></div>
+        <div class="field-box"><label>Email</label><input type="email" id="f_email"></div>
+        <div class="field-box"><label>Site web</label><input type="text" id="f_siteweb"></div>
+<div class="field-box"><label>Budget envisagé (€)</label><input type="number" id="f_budget" min="0" step="500" placeholder="Ex: 50000"></div>
+        <div class="field-box">
           <label id="typeCabinetLabel">Type de cabinet</label>
           <select id="f_typeCabinet"></select>
         </div>
-        <div>
-          <label>Statut</label>
-          <select id="f_statut"></select>
-        </div>
-        <div>
-          <label>Priorité</label>
-          <select id="f_priorite">
-            <option value="Moyenne">Moyenne</option>
-            <option value="Haute">Haute</option>
-            <option value="Basse">Basse</option>
-          </select>
-        </div>
-        <div><label>Dernier contact</label>
+
+        <div class="modal-section-label full">Suivi commercial</div>
+        <div class="field-box"><label>Dernier contact</label>
           <div class="field-clear"><input type="date" id="f_dernierContact"><button type="button" class="clear-btn" onclick="clearFormField('f_dernierContact')" title="Effacer">✕</button></div>
         </div>
-        <div><label>Prochaine relance</label>
+        <div class="field-box"><label>Prochaine relance</label>
           <div class="field-clear"><input type="date" id="f_prochaineRelance"><button type="button" class="clear-btn" onclick="clearFormField('f_prochaineRelance')" title="Effacer">✕</button></div>
         </div>
-        <div class="full"><label>Date &amp; heure du RDV</label>
+        <div class="field-box full"><label>Date &amp; heure du RDV</label>
           <div class="field-clear"><input type="datetime-local" id="f_dateRdv"><button type="button" class="clear-btn" onclick="clearFormField('f_dateRdv')" title="Effacer">✕</button></div>
         </div>
         <div class="full">
-          <label>Produits</label>
+          <label style="display:block; font-size:12px; color:var(--muted); margin-bottom:5px;">Produits</label>
           <div class="chip-group" id="chipGroupCGP">
             <label class="chip"><input type="checkbox" value="Leads" class="produit-check"> Leads</label>
             <label class="chip"><input type="checkbox" value="Trésorerie entreprise" class="produit-check"> Trésorerie entreprise</label>
@@ -710,7 +778,7 @@
             <label class="chip"><input type="checkbox" value="Rénovation énergétique globale" class="produit-check"> Rénovation énergétique globale</label>
           </div>
         </div>
-        <div class="full">
+        <div class="field-box full">
           <label>Notes</label>
           <textarea id="f_notes" placeholder="Historique des échanges, remarques…"></textarea>
         </div>
@@ -1658,7 +1726,26 @@ $('confirmReassignBtn').addEventListener('click', async ()=>{
 function populateStatutSelects(){
   $('filterStatut').innerHTML = '<option value="">Tous les statuts</option>' +
     STATUTS.map(s=>`<option value="${s}">${s}</option>`).join('');
-  $('f_statut').innerHTML = STATUTS.map(s=>`<option value="${s}">${s}</option>`).join('');
+  $('statutToggle').innerHTML = STATUTS.map(s=>{
+    const id = 'f_statut_' + s.replace(/[^a-zA-Z0-9]/g,'_');
+    return `<div class="domaine-radio">
+      <input type="radio" name="f_statut_radio" id="${id}" value="${s}">
+      <label for="${id}">${s}</label>
+    </div>`;
+  }).join('');
+}
+
+/* "depuis 3 heures", "depuis 2 jours"... à partir d'un timestamp ISO */
+function timeAgo(iso){
+  if(!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if(min < 1) return "à l'instant";
+  if(min < 60) return `depuis ${min} minute${min>1?'s':''}`;
+  const h = Math.floor(min/60);
+  if(h < 24) return `depuis ${h} heure${h>1?'s':''}`;
+  const d = Math.floor(h/24);
+  return `depuis ${d} jour${d>1?'s':''}`;
 }
 
 function populateProduitFilter(){
@@ -1710,7 +1797,22 @@ function openProspectModal(id){
   currentEditId = id || null;
   hideFormError();
   const p = id ? prospects.find(x=>x.id===id) : null;
-  $('modalTitle').textContent = id ? 'Modifier le prospect' : 'Nouveau prospect';
+
+  if(p){
+    $('modalNewHeader').style.display = 'none';
+    $('modalContactHeader').style.display = 'flex';
+    const initials = (((p.prenom||'').trim()[0]||'') + ((p.nom||'').trim()[0]||'')).toUpperCase() || '?';
+    $('modalAvatar').textContent = initials;
+    $('modalAvatar').style.background = p.domaine === 'Solaire' ? 'var(--solar)' : 'var(--gold)';
+    $('modalContactName').textContent = `${p.prenom} ${p.nom}`.trim() || 'Sans nom';
+    $('modalContactMeta').textContent = p.updated_at
+      ? `${p.statut} · ${timeAgo(p.updated_at)}`
+      : p.statut;
+  } else {
+    $('modalNewHeader').style.display = 'block';
+    $('modalContactHeader').style.display = 'none';
+    $('modalTitle').textContent = 'Nouveau prospect';
+  }
 
   const defaultDomaine = p ? p.domaine : (currentDomaineTab !== 'Tous' ? currentDomaineTab : 'CGP');
   document.querySelector(`input[name="f_domaine"][value="${defaultDomaine}"]`).checked = true;
@@ -1727,8 +1829,15 @@ function openProspectModal(id){
   $('f_siteweb').value = p ? p.siteweb : '';
 $('f_budget').value = (p && p.budget != null) ? p.budget : '';
   $('f_typeCabinet').value = p ? p.typeCabinet : '';
-  $('f_statut').value = p ? p.statut : 'À appeler';
-  $('f_priorite').value = p ? p.priorite : 'Moyenne';
+
+  const statutVal = p ? p.statut : 'À appeler';
+  const statutRadio = document.querySelector(`input[name="f_statut_radio"][value="${statutVal}"]`);
+  if(statutRadio) statutRadio.checked = true;
+
+  const prioriteVal = p ? p.priorite : 'Moyenne';
+  const prioriteRadio = document.querySelector(`input[name="f_priorite_radio"][value="${prioriteVal}"]`);
+  if(prioriteRadio) prioriteRadio.checked = true;
+
   $('f_dernierContact').value = p ? (p.dernierContact || '') : '';
   $('f_prochaineRelance').value = p ? (p.prochaineRelance || '') : '';
   $('f_dateRdv').value = p ? isoToLocalInput(p.dateRdv) : '';
@@ -1768,8 +1877,8 @@ $('prospectForm').addEventListener('submit', async (e)=>{
     siteweb: $('f_siteweb').value.trim(),
 budget: $('f_budget').value !== '' ? parseFloat($('f_budget').value) : null,
     typeCabinet: $('f_typeCabinet').value,
-    statut: $('f_statut').value,
-    priorite: $('f_priorite').value,
+    statut: document.querySelector('input[name="f_statut_radio"]:checked').value,
+    priorite: document.querySelector('input[name="f_priorite_radio"]:checked').value,
     dernierContact: $('f_dernierContact').value || null,
     prochaineRelance: $('f_prochaineRelance').value || null,
     dateRdv: localInputToIso($('f_dateRdv').value),
