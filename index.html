@@ -163,12 +163,32 @@
 
   main{max-width:1400px; margin:0 auto; padding:24px 26px 60px; width:100%;}
 
+  .mobile-menu-btn{
+    display:none; background:none; border:none; font-size:22px; line-height:1; color:var(--ink);
+    cursor:pointer; padding:4px 8px; margin-right:2px;
+  }
+  .sidebar-backdrop{
+    display:none; position:fixed; inset:0; background:rgba(15,30,51,.45); z-index:59;
+  }
+  .sidebar-backdrop.open{display:block;}
+  .sidebar-close-btn{display:none;}
+
   @media (max-width:900px){
-    .app-shell{flex-direction:column;}
-    .sidebar{width:100%; flex:0 0 auto; height:auto; position:sticky; top:0; padding:10px 0; z-index:60;}
-    .sidebar-brand{display:none;}
-    .sidebar-nav{flex-direction:row; overflow-x:auto; padding:0 10px; gap:6px;}
-    .sidebar-nav-item{flex:0 0 auto; white-space:nowrap; padding:9px 14px;}
+    .mobile-menu-btn{display:inline-flex; align-items:center; justify-content:center;}
+    .topbar .sub{display:none;}
+    .sidebar{
+      position:fixed; top:0; left:0; height:100vh; width:264px; z-index:60;
+      transform:translateX(-100%); transition:transform .22s ease; box-shadow:none;
+    }
+    .sidebar.mobile-open{transform:translateX(0); box-shadow:14px 0 34px rgba(15,30,51,.18);}
+    .sidebar-brand{display:flex; justify-content:space-between; align-items:center;}
+    .sidebar-close-btn{
+      display:inline-flex; align-items:center; justify-content:center; background:none; border:none;
+      font-size:20px; color:var(--muted); cursor:pointer; padding:2px 6px;
+    }
+    .sidebar-nav{flex-direction:column; overflow-x:visible; padding:0 10px;}
+    .sidebar-nav-item{flex:0 0 auto; white-space:normal; padding:11px 12px;}
+    .app-main{width:100%;}
   }
 
   #globalError{
@@ -278,6 +298,10 @@
     border:1px solid var(--line); border-radius:6px; padding:5px 8px; font-size:12.5px; background:#fff; color:var(--ink);
   }
   .prospect-list{display:flex; flex-direction:column;}
+  .list-pagination{
+    display:flex; align-items:center; justify-content:center; gap:16px; padding:14px 20px;
+    border-top:1px solid var(--line);
+  }
   .prospect-card{
     display:flex; align-items:flex-start; gap:16px; padding:20px; border-bottom:1px solid var(--line);
     cursor:pointer; transition:background .12s;
@@ -300,18 +324,13 @@
   .priorite-pill-Moyenne{background:var(--gold-soft); color:var(--gold);}
   .priorite-pill-Basse{background:#eef0f4; color:#4a5568;}
   .pc-info-grid{
-    display:flex; flex-direction:column; gap:9px; margin-top:16px;
-    background:#fbfbfa; border:1px solid var(--line); border-radius:9px; padding:12px 14px;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px 22px; margin-top:16px;
   }
-  .pc-info-item{
-    display:flex; align-items:center; gap:14px; padding-bottom:9px; border-bottom:1px solid #eeece5;
-  }
-  .pc-info-item:last-child{border-bottom:none; padding-bottom:0;}
   .pc-info-item label{
-    flex:0 0 130px; display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;
-    font-weight:700; margin-bottom:0;
+    display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;
+    font-weight:700; margin-bottom:3px;
   }
-  .pc-info-item .pc-val{font-size:14px; color:var(--ink); display:flex; align-items:center; gap:6px; flex:1; min-width:0;}
+  .pc-info-item .pc-val{font-size:14px; color:var(--ink); display:flex; align-items:center; gap:6px;}
   a.pc-val{color:var(--ink); text-decoration:none;}
   a.pc-val:hover{color:var(--gold);}
   .pc-produits{margin-top:14px; display:flex; flex-wrap:wrap; gap:6px;}
@@ -540,11 +559,10 @@
   @media (max-width:900px){
     .stats{grid-template-columns:repeat(2,1fr);}
     .form-grid{grid-template-columns:1fr;}
+    .info-bubbles-row{flex-direction:column;}
     main{padding:16px;}
     header.topbar{padding:12px 16px;}
     .section-header{flex-direction:column; align-items:flex-start;}
-    .pc-info-item{flex-direction:column; align-items:flex-start; gap:2px;}
-    .pc-info-item label{flex:none;}
   }
 </style>
 </head>
@@ -578,10 +596,14 @@
 
 <!-- APP -->
 <div id="app" class="app-shell">
-  <aside class="sidebar">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileMenu()"></div>
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
-      <div class="brand-name">Suivi Prospection<span>CGP &amp; Solaire</span></div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
+        <div class="brand-name">Suivi Prospection<span>CGP &amp; Solaire</span></div>
+      </div>
+      <button class="sidebar-close-btn" onclick="closeMobileMenu()" title="Fermer">✕</button>
     </div>
     <nav class="sidebar-nav">
       <button class="sidebar-nav-item" data-page="dashboard" onclick="switchPage('dashboard')"><span class="snav-icon">📊</span> Tableau de bord</button>
@@ -596,6 +618,7 @@
   <div class="app-main">
     <header class="topbar">
       <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="openMobileMenu()" title="Menu">☰</button>
         <div class="brand-mark"><img src="logo.jpg" alt="Logo" style="width:100%; height:100%; object-fit:contain; border-radius:6px;"></div>
         <div>
           <div class="sub">Leads · CGP (Trésorerie, Assurance-vie, Crédit lombard, Produits structurés, Défisc.) · Solaire</div>
@@ -686,6 +709,11 @@
           </div>
           <div id="prospectsBody" class="prospect-list"></div>
           <div class="empty-state" id="emptyState" style="display:none;">Aucun prospect ne correspond à ces critères.</div>
+          <div class="list-pagination" id="listPagination" style="display:none;">
+            <button class="icon-btn" id="listPrevBtn" title="Page précédente">← Précédent</button>
+            <span id="listPaginationLabel" style="color:var(--muted); font-size:12.5px;"></span>
+            <button class="icon-btn" id="listNextBtn" title="Page suivante">Suivant →</button>
+          </div>
         </section>
       </div>
 
@@ -1141,7 +1169,7 @@ async function initAppAfterLogin(){
     hideLoading();
     setupRealtime();
     setupClaimsBroadcast();
-    renderAllImmediate();
+    renderAll();
     renderPendingClaims();
     if(pendingClaims.length) openPendingClaimsModal();
   } else {
@@ -1202,10 +1230,7 @@ function prospectToRow(p, userId){
 
 async function loadProspects(){
   try{
-    // Pagination complète : Supabase/PostgREST plafonne chaque requête à 1000 lignes,
-    // donc on boucle avec .range() jusqu'à avoir tout récupéré, quel que soit le
-    // nombre total de prospects (aucune limite artificielle côté CRM).
-    const PAGE_SIZE = 1000;
+    const PAGE_SIZE = 1000; // limite par défaut de Supabase par requête : on paginate pour tout récupérer
     let all = [];
     let from = 0;
     while(true){
@@ -1306,6 +1331,7 @@ function setDomaineTab(d){
   saveUiPref('domaineTab', d);
   updateSectionHeader();
   populateProduitFilter();
+  listPage = 1;
   renderAll();
 }
 
@@ -1342,6 +1368,16 @@ function switchPage(page){
     el.classList.toggle('active', el.id === 'page-' + page);
   });
   window.scrollTo(0,0);
+  closeMobileMenu();
+}
+
+function openMobileMenu(){
+  $('sidebar').classList.add('mobile-open');
+  $('sidebarBackdrop').classList.add('open');
+}
+function closeMobileMenu(){
+  $('sidebar').classList.remove('mobile-open');
+  $('sidebarBackdrop').classList.remove('open');
 }
 
 function renderRdvView(){
@@ -1528,47 +1564,38 @@ $('bulkDeleteBtn').addEventListener('click', async ()=>{
   if(!ids.length) return;
   if(!confirm(`Supprimer définitivement ${ids.length} prospect(s) ? Cette action est irréversible.`)) return;
 
-  // Suppression PAR LOTS : au-delà de quelques centaines d'identifiants, une seule
-  // requête .in(...) dépasse la longueur d'URL acceptée par Supabase/PostgREST et
-  // échoue (silencieusement ou avec une erreur réseau) — c'est ce qui empêchait de
-  // supprimer de grosses sélections. On découpe donc en lots de 200, on retire
-  // localement (et on met à jour Prospects/Ventes/Campagnes) au fur et à mesure,
-  // pour rester fluide même sur des centaines de prospects.
-  const DELETE_CHUNK_SIZE = 200;
-  const chunks = [];
-  for(let i=0; i<ids.length; i+=DELETE_CHUNK_SIZE) chunks.push(ids.slice(i, i+DELETE_CHUNK_SIZE));
-
-  let deletedCount = 0;
-  let firstErrorMsg = null;
-
-  for(const chunk of chunks){
-    setSaveIndicator('saving', `Suppression… (${deletedCount}/${ids.length})`);
-    try{
+  setSaveIndicator('saving', 'Suppression…');
+  const CHUNK = 300; // évite les requêtes trop longues sur de gros volumes
+  const deletedIds = new Set();
+  try{
+    for(let i=0; i<ids.length; i+=CHUNK){
+      const chunk = ids.slice(i, i+CHUNK);
+      if(ids.length > CHUNK) setSaveIndicator('saving', `Suppression… (${Math.min(i+CHUNK, ids.length)}/${ids.length})`);
       const { error } = await supabaseClient
         .from('prospects').delete().in('id', chunk).eq('user_id', session.user.id);
       if(error){
-        if(!firstErrorMsg) firstErrorMsg = error.message;
-        continue; // on tente quand même les lots suivants plutôt que de tout arrêter
+        prospects = prospects.filter(p => !deletedIds.has(p.id));
+        selectedIds = new Set(Array.from(selectedIds).filter(id => !deletedIds.has(id)));
+        setSaveIndicator(deletedIds.size ? 'saved' : 'error', deletedIds.size ? 'Enregistré' : 'Erreur de sauvegarde');
+        updateBulkActionsBar();
+        renderAll();
+        showGlobalError(`La suppression groupée a échoué après ${deletedIds.size} prospect(s) supprimé(s) : ${error.message}`);
+        return;
       }
-      const chunkSet = new Set(chunk);
-      chunk.forEach(id => selectedIds.delete(id));
-      prospects = prospects.filter(p => !chunkSet.has(p.id));
-      deletedCount += chunk.length;
-      updateBulkActionsBar();
-      renderAll(); // met à jour Prospects, Ventes (pipeline/CA) et les compteurs au fur et à mesure
-    }catch(e){
-      if(!firstErrorMsg) firstErrorMsg = "erreur réseau";
+      chunk.forEach(id => deletedIds.add(id));
     }
-  }
-
-  if(firstErrorMsg){
-    setSaveIndicator('error', 'Erreur de sauvegarde');
-    showGlobalError(`${deletedCount} prospect(s) supprimé(s) sur ${ids.length}. Un lot a échoué (${firstErrorMsg}) — relancez la suppression sur la sélection restante si besoin.`);
-  } else {
+    prospects = prospects.filter(p => !deletedIds.has(p.id));
+    selectedIds.clear();
     setSaveIndicator('saved', 'Enregistré');
+    updateBulkActionsBar();
+    renderAll();
+  }catch(e){
+    prospects = prospects.filter(p => !deletedIds.has(p.id));
+    setSaveIndicator(deletedIds.size ? 'saved' : 'error', deletedIds.size ? 'Enregistré' : 'Erreur de sauvegarde');
+    updateBulkActionsBar();
+    renderAll();
+    showGlobalError("Erreur réseau pendant la suppression groupée.");
   }
-  updateBulkActionsBar();
-  renderAll();
 });
 
 /* Sauvegarde rapide d'un champ (statut, priorité, produits, dates) */
@@ -2181,12 +2208,14 @@ function toCamel(field){
 $('sortFieldSelect').addEventListener('change', (e)=>{
   sortState.field = e.target.value;
   saveUiPref('sort', sortState);
+  listPage = 1;
   renderTable();
 });
 $('sortDirBtn').addEventListener('click', ()=>{
   sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
   $('sortDirBtn').textContent = sortState.dir === 'asc' ? '↑' : '↓';
   saveUiPref('sort', sortState);
+  listPage = 1;
   renderTable();
 });
 (function initSortControls(){
@@ -2194,11 +2223,33 @@ $('sortDirBtn').addEventListener('click', ()=>{
   $('sortFieldSelect').value = fieldToOption[sortState.field] || 'created_at';
   $('sortDirBtn').textContent = sortState.dir === 'asc' ? '↑' : '↓';
 })();
+$('listPrevBtn').addEventListener('click', ()=>{ listPage--; renderTable(); window.scrollTo(0,0); });
+$('listNextBtn').addEventListener('click', ()=>{ listPage++; renderTable(); window.scrollTo(0,0); });
+
+let listPage = 1;
+const LIST_PAGE_SIZE = 60;
 
 function renderTable(){
-  const list = getFilteredSorted();
+  const fullList = getFilteredSorted();
   const body = $('prospectsBody');
-  $('emptyState').style.display = list.length ? 'none' : 'block';
+  $('emptyState').style.display = fullList.length ? 'none' : 'block';
+
+  const totalPages = Math.max(1, Math.ceil(fullList.length / LIST_PAGE_SIZE));
+  if(listPage > totalPages) listPage = totalPages;
+  if(listPage < 1) listPage = 1;
+  const startIdx = (listPage - 1) * LIST_PAGE_SIZE;
+  const list = fullList.slice(startIdx, startIdx + LIST_PAGE_SIZE);
+
+  const pagination = $('listPagination');
+  if(fullList.length > LIST_PAGE_SIZE){
+    pagination.style.display = 'flex';
+    $('listPaginationLabel').textContent =
+      `${startIdx + 1}–${Math.min(startIdx + LIST_PAGE_SIZE, fullList.length)} sur ${fullList.length} · page ${listPage}/${totalPages}`;
+    $('listPrevBtn').disabled = listPage <= 1;
+    $('listNextBtn').disabled = listPage >= totalPages;
+  } else {
+    pagination.style.display = 'none';
+  }
 
   body.innerHTML = list.map(p=>{
     const produitsCount = (p.produits||[]).length;
@@ -2273,42 +2324,30 @@ function escapeHtml(str){
   return String(str||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-/* ============================================================
-   RENDU GLOBAL — avec anti-rebond ("debounce")
-   ============================================================
-   De nombreux évènements peuvent déclencher renderAll() en rafale
-   (ex : suppression groupée de 50 prospects = 50 évènements temps
-   réel qui arrivent l'un après l'autre). Sans anti-rebond, chacun
-   déclenchait un redessin complet de toutes les pages (Prospects,
-   Tableau de bord, Ventes, Équipe…), ce qui provoquait des ralentis-
-   sements voire des blocages visibles sur de grosses listes.
-   On regroupe donc les appels rapprochés en un seul redessin.
-*/
-let _renderAllTimer = null;
-function renderAll(){
-  if(_renderAllTimer) return;
-  _renderAllTimer = setTimeout(()=>{
-    _renderAllTimer = null;
-    renderAllImmediate();
-  }, 60);
-}
-function renderAllImmediate(){
-  renderStats();
-  renderTable();
-  renderRdvView();
-  renderDashboard();
-  renderSalesStats();
-  renderKanban();
-  renderAssocieList();
-  renderPendingClaims();
+function safeRender(fn){
+  try{ fn(); }catch(e){ console.error('Erreur de rendu (' + (fn.name||'anonyme') + ') :', e); }
 }
 
-['searchInput'].forEach(id=>$(id).addEventListener('input', renderTable));
+function renderAll(){
+  // Les rendus "légers" (comptages, stats) passent en premier et indépendamment
+  // les uns des autres : si l'affichage de la liste plante avec beaucoup de
+  // prospects, le Tableau de bord et les Ventes restent quand même à jour.
+  safeRender(renderDashboard);
+  safeRender(renderSalesStats);
+  safeRender(renderStats);
+  safeRender(renderAssocieList);
+  safeRender(renderKanban);
+  safeRender(renderRdvView);
+  safeRender(renderTable);
+}
+
+['searchInput'].forEach(id=>$(id).addEventListener('input', ()=>{ listPage = 1; renderTable(); }));
 ['filterStatut','filterPriorite','filterProduit'].forEach(id=>{
   $(id).addEventListener('change', ()=>{
     saveUiPref('filters', {
       statut: $('filterStatut').value, priorite: $('filterPriorite').value, produit: $('filterProduit').value
     });
+    listPage = 1;
     renderTable();
   });
 });
@@ -2333,9 +2372,6 @@ function renderAllImmediate(){
    IMPORT CSV — tokenizer robuste (virgule OU point-virgule, guillemets,
    accents, BOM Excel/Google Sheets) + détection d'en-tête + mapping
    manuel quand le fichier n'a pas de ligne d'en-têtes du tout.
-   AUCUNE limite sur le nombre de lignes : le fichier est découpé en
-   lots d'envoi pour rester fiable, mais la totalité du fichier est
-   toujours traitée, quelle que soit sa taille.
    ============================================================ */
 $('importBtn').addEventListener('click', ()=>$('csvFileInput').click());
 $('csvFileInput').addEventListener('change', async (e)=>{
@@ -2567,8 +2603,7 @@ $('confirmMappingBtn').addEventListener('click', ()=>{
 
 /* Construit les lignes à insérer à partir d'une liste d'objets déjà
    normalisés (mêmes clés, qu'elles viennent d'en-têtes détectées ou
-   d'un mapping manuel), puis les envoie à Supabase par lots — sans
-   aucune limite sur le nombre total de lignes traitées. */
+   d'un mapping manuel), puis les envoie à Supabase. */
 async function processImportRows(rows, delimiter){
   setSaveIndicator('saving', 'Import en cours…');
 
@@ -2636,18 +2671,14 @@ async function processImportRows(rows, delimiter){
   }
 
   try{
-    // Envoi par lots de 500 pour rester fiable sur de très gros fichiers (plusieurs
-    // milliers de lignes) — la boucle traite la TOTALITÉ de toInsert, sans plafond :
-    // un fichier de 10 000 lignes sera importé en 20 lots de 500, un fichier de
-    // 500 000 lignes en 1000 lots, etc.
-    const CHUNK_SIZE = 500;
+    const CHUNK_SIZE = 500; // on envoie par lots pour rester sous la limite Supabase et éviter les timeouts
     const chunks = [];
     for(let i=0; i<toInsert.length; i+=CHUNK_SIZE) chunks.push(toInsert.slice(i, i+CHUNK_SIZE));
 
     let insertedCount = 0;
     const insertedRows = [];
     for(let i=0; i<chunks.length; i++){
-      setSaveIndicator('saving', `Import en cours… (${i*CHUNK_SIZE + chunks[i].length}/${toInsert.length})`);
+      if(chunks.length > 1) setSaveIndicator('saving', `Import en cours… (${i*CHUNK_SIZE + chunks[i].length}/${toInsert.length})`);
       const { data, error } = await supabaseClient.from('prospects').insert(chunks[i]).select();
       if(error){
         setSaveIndicator(insertedCount ? 'saved' : 'error', insertedCount ? 'Enregistré' : 'Erreur de sauvegarde');
@@ -2662,14 +2693,9 @@ async function processImportRows(rows, delimiter){
       }
       (data||[]).forEach(row=> insertedRows.push(row));
       insertedCount += chunks[i].length;
-      // Rafraîchit Prospects/Ventes/Campagnes au fil de l'import, pas seulement à la fin,
-      // pour un import de gros fichiers qui reste lisible en temps réel.
-      insertedRows.slice(insertedRows.length - (data||[]).length).forEach(row=>{
-        if(!prospects.find(x=>x.id===row.id)) prospects.unshift(rowToProspect(row));
-      });
-      renderAll();
     }
 
+    insertedRows.forEach(row=> prospects.unshift(rowToProspect(row)));
     setSaveIndicator('saved','Enregistré');
     renderAll();
     const skipMsg = skippedNoPhone > 0 ? ` (${skippedNoPhone} ligne(s) ignorée(s) car sans numéro de téléphone)` : '';
