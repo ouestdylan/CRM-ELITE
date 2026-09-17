@@ -424,6 +424,21 @@
   }
   .modal-section-label:first-of-type{margin-top:0; padding-top:0; border-top:none;}
 
+  /* Bulles horizontales (infos empilées verticalement à l'intérieur) */
+  .info-bubbles-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px;}
+  .info-bubble{
+    flex:1; min-width:200px; background:#f7f8fa; border:1px solid var(--line); border-radius:14px;
+    padding:16px 18px; display:flex; flex-direction:column; gap:13px;
+  }
+  .info-bubble-row label{
+    display:block; font-size:10.5px; color:var(--muted); margin-bottom:2px;
+    text-transform:uppercase; letter-spacing:.03em; font-weight:700;
+  }
+  .info-bubble-row input{
+    width:100%; padding:0; border:none; background:transparent; font-size:14px; color:var(--ink); font-family:inherit;
+  }
+  .info-bubble-row input:focus{outline:none;}
+
   .domaine-toggle{display:flex; gap:8px; flex-wrap:wrap;}
   .domaine-radio{flex:1;}
   .domaine-radio input{position:absolute; opacity:0; width:0; height:0;}
@@ -783,15 +798,27 @@
         </div>
 
         <div class="modal-section-label full">Informations du contact</div>
+
+        <div class="full info-bubbles-row">
+          <div class="info-bubble">
+            <div class="info-bubble-row"><label>Nom</label><input type="text" id="f_nom" required></div>
+            <div class="info-bubble-row"><label>Téléphone</label><input type="text" id="f_telephone"></div>
+            <div class="info-bubble-row"><label>Email</label><input type="email" id="f_email"></div>
+            <div class="info-bubble-row"><label>SIREN</label><input type="text" id="f_siren" placeholder="123 456 789"></div>
+          </div>
+          <div class="info-bubble">
+            <div class="info-bubble-row"><label>Département</label><input type="text" id="f_departement"></div>
+            <div class="info-bubble-row"><label>Région</label><input type="text" id="f_region"></div>
+          </div>
+        </div>
+
         <div class="field-box"><label>Prénom</label><input type="text" id="f_prenom"></div>
-        <div class="field-box"><label>Nom</label><input type="text" id="f_nom" required></div>
         <div class="field-box"><label>Société</label><input type="text" id="f_societe"></div>
         <div class="field-box"><label>Adresse</label><input type="text" id="f_adresse"></div>
         <div class="field-box"><label>Code postal</label><input type="text" id="f_codePostal"></div>
         <div class="field-box"><label>Ville</label><input type="text" id="f_ville"></div>
-        <div class="field-box"><label>Téléphone</label><input type="text" id="f_telephone"></div>
-        <div class="field-box"><label>Email</label><input type="email" id="f_email"></div>
         <div class="field-box"><label>Site web</label><input type="text" id="f_siteweb"></div>
+        <div class="field-box"><label>Ancienneté société</label><input type="text" id="f_ancienneteSociete" placeholder="Ex : 5 ans"></div>
 <div class="field-box"><label>Budget envisagé (€)</label><input type="number" id="f_budget" min="0" step="500" placeholder="Ex: 50000"></div>
         <div class="field-box">
           <label id="typeCabinetLabel">Type de cabinet</label>
@@ -1128,6 +1155,10 @@ function rowToProspect(row){
     adresse: row.adresse || '',
     codePostal: row.code_postal || '',
     ville: row.ville || '',
+    departement: row.departement || '',
+    region: row.region || '',
+    ancienneteSociete: row.anciennete_societe || '',
+    siren: row.siren || '',
     telephone: row.telephone || '',
     email: row.email || '',
     siteweb: row.siteweb || '',
@@ -1150,6 +1181,8 @@ function prospectToRow(p, userId){
   return {
     nom: p.nom, prenom: p.prenom, societe: p.societe,
     adresse: p.adresse, code_postal: p.codePostal, ville: p.ville,
+    departement: p.departement, region: p.region,
+    anciennete_societe: p.ancienneteSociete, siren: p.siren,
     telephone: p.telephone, email: p.email, siteweb: p.siteweb,
     type_cabinet: p.typeCabinet, domaine: p.domaine === 'Solaire' ? 'Solaire' : 'CGP',
     statut: p.statut, priorite: p.priorite,
@@ -1162,17 +1195,26 @@ function prospectToRow(p, userId){
 
 async function loadProspects(){
   try{
-    const { data, error } = await supabaseClient
-      .from('prospects')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false });
+    const PAGE_SIZE = 1000; // limite par défaut de Supabase par requête : on paginate pour tout récupérer
+    let all = [];
+    let from = 0;
+    while(true){
+      const { data, error } = await supabaseClient
+        .from('prospects')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
 
-    if(error){
-      showGlobalError("Impossible de charger vos prospects (" + error.message + "). Vos données existantes ne sont pas perdues : réessayez de recharger la page.");
-      return false;
+      if(error){
+        showGlobalError("Impossible de charger vos prospects (" + error.message + "). Vos données existantes ne sont pas perdues : réessayez de recharger la page.");
+        return false;
+      }
+      all = all.concat(data || []);
+      if(!data || data.length < PAGE_SIZE) break; // dernière page atteinte
+      from += PAGE_SIZE;
     }
-    prospects = (data || []).map(rowToProspect);
+    prospects = all.map(rowToProspect);
     hideGlobalError();
     return true;
   }catch(e){
@@ -1873,6 +1915,10 @@ function openProspectModal(id){
   $('f_adresse').value = p ? p.adresse : '';
   $('f_codePostal').value = p ? p.codePostal : '';
   $('f_ville').value = p ? p.ville : '';
+  $('f_departement').value = p ? p.departement : '';
+  $('f_region').value = p ? p.region : '';
+  $('f_ancienneteSociete').value = p ? p.ancienneteSociete : '';
+  $('f_siren').value = p ? p.siren : '';
   $('f_telephone').value = p ? p.telephone : '';
   $('f_email').value = p ? p.email : '';
   $('f_siteweb').value = p ? p.siteweb : '';
@@ -1921,6 +1967,10 @@ $('prospectForm').addEventListener('submit', async (e)=>{
     adresse: $('f_adresse').value.trim(),
     codePostal: $('f_codePostal').value.trim(),
     ville: $('f_ville').value.trim(),
+    departement: $('f_departement').value.trim(),
+    region: $('f_region').value.trim(),
+    ancienneteSociete: $('f_ancienneteSociete').value.trim(),
+    siren: $('f_siren').value.trim(),
     telephone: $('f_telephone').value.trim(),
     email: $('f_email').value.trim(),
     siteweb: $('f_siteweb').value.trim(),
@@ -2317,6 +2367,10 @@ const IMPORT_FIELD_OPTIONS = [
   { key:'adresse',            label:'Adresse' },
   { key:'code postal',        label:'Code postal' },
   { key:'ville',               label:'Ville' },
+  { key:'departement',         label:'Département' },
+  { key:'region',              label:'Région' },
+  { key:'siren',               label:'SIREN' },
+  { key:'anciennete_societe',  label:'Ancienneté société' },
   { key:'telephone',          label:'Téléphone' },
   { key:'email',               label:'Email' },
   { key:'site web',           label:'Site web' },
@@ -2494,6 +2548,10 @@ async function processImportRows(rows, delimiter){
       adresse: r.adresse || '',
       code_postal: r['code postal'] || r.codepostal || r.cp || '',
       ville: r.ville || '',
+      departement: r.departement || '',
+      region: r.region || '',
+      siren: r.siren || '',
+      anciennete_societe: r.anciennete_societe || r['anciennete societe'] || '',
       telephone, email,
       siteweb: r.siteweb || r['site web'] || '',
       type_cabinet: r.typecabinet || r.type_cabinet || r['type de cabinet'] || r['type'] || '',
@@ -2521,17 +2579,35 @@ async function processImportRows(rows, delimiter){
   }
 
   try{
-    const { data, error } = await supabaseClient.from('prospects').insert(toInsert).select();
-    if(error){
-      setSaveIndicator('error','Erreur de sauvegarde');
-      showGlobalError("Échec de l'import CSV : " + error.message + ". Astuce : si l'erreur mentionne une colonne (domaine, adresse, code_postal…), ajoutez-la à votre table Supabase (voir instructions).");
-      return;
+    const CHUNK_SIZE = 500; // on envoie par lots pour rester sous la limite Supabase et éviter les timeouts
+    const chunks = [];
+    for(let i=0; i<toInsert.length; i+=CHUNK_SIZE) chunks.push(toInsert.slice(i, i+CHUNK_SIZE));
+
+    let insertedCount = 0;
+    const insertedRows = [];
+    for(let i=0; i<chunks.length; i++){
+      if(chunks.length > 1) setSaveIndicator('saving', `Import en cours… (${i*CHUNK_SIZE + chunks[i].length}/${toInsert.length})`);
+      const { data, error } = await supabaseClient.from('prospects').insert(chunks[i]).select();
+      if(error){
+        setSaveIndicator(insertedCount ? 'saved' : 'error', insertedCount ? 'Enregistré' : 'Erreur de sauvegarde');
+        insertedRows.forEach(row=> prospects.unshift(rowToProspect(row)));
+        renderAll();
+        showGlobalError(
+          `Échec de l'import CSV après ${insertedCount} prospect(s) importé(s) avec succès : ${error.message}. ` +
+          `Astuce : si l'erreur mentionne une colonne (domaine, adresse, code_postal…), ajoutez-la à votre table Supabase (voir instructions). ` +
+          `Vous pouvez réimporter le même fichier une fois corrigé : les prospects déjà importés seront ignorés comme doublons.`
+        );
+        return;
+      }
+      (data||[]).forEach(row=> insertedRows.push(row));
+      insertedCount += chunks[i].length;
     }
-    (data||[]).forEach(row=> prospects.unshift(rowToProspect(row)));
+
+    insertedRows.forEach(row=> prospects.unshift(rowToProspect(row)));
     setSaveIndicator('saved','Enregistré');
     renderAll();
     const skipMsg = skippedNoPhone > 0 ? ` (${skippedNoPhone} ligne(s) ignorée(s) car sans numéro de téléphone)` : '';
-    alert(`${data.length} prospect(s) importé(s) avec succès${skipMsg}.`);
+    alert(`${insertedCount} prospect(s) importé(s) avec succès${skipMsg}.`);
   }catch(e){
     setSaveIndicator('error','Erreur de sauvegarde');
     showGlobalError("Erreur réseau pendant l'import CSV.");
@@ -2544,12 +2620,12 @@ async function processImportRows(rows, delimiter){
    ============================================================ */
 $('exportBtn').addEventListener('click', ()=>{
   const list = getFilteredSorted();
-  const headers = ['nom','prenom','societe','adresse','code_postal','ville','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits','lien_rdv'];
+  const headers = ['nom','prenom','societe','adresse','code_postal','ville','departement','region','siren','anciennete_societe','telephone','email','siteweb','domaine','type_cabinet','statut','priorite','dernier_contact','prochaine_relance','budget','notes','produits','lien_rdv'];
   const csvRows = [headers.join(',')];
   list.forEach(p=>{
     const lienRdv = BOOKING_PAGE_URL.includes('VOTRE-DOMAINE') ? '' : `${BOOKING_PAGE_URL}?id=${p.id}`;
     const row = [
-      p.nom,p.prenom,p.societe,p.adresse,p.codePostal,p.ville,p.telephone,p.email,p.siteweb,p.domaine,p.typeCabinet,
+      p.nom,p.prenom,p.societe,p.adresse,p.codePostal,p.ville,p.departement,p.region,p.siren,p.ancienneteSociete,p.telephone,p.email,p.siteweb,p.domaine,p.typeCabinet,
       p.statut,p.priorite,p.dernierContact||'',p.prochaineRelance||'',p.budget!=null?p.budget:'',
       (p.notes||'').replace(/[\r\n,]/g,' '),
       (p.produits||[]).join(';'),
